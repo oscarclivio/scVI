@@ -355,7 +355,7 @@ class Posterior:
         return imputed_list.squeeze()
 
     @torch.no_grad()
-    def generate(self, n_samples=100, genes=None):  # with n_samples>1 return original list/ otherwose sequential
+    def generate(self, n_samples=100, genes=None, zero_inflated=False):  # with n_samples>1 return original list/ otherwose sequential
         '''
         Return original_values as y and generated as x (for posterior density visualization)
         :param n_samples:
@@ -367,8 +367,10 @@ class Posterior:
         batch_size = 128  # max(self.data_loader_kwargs['batch_size'] // n_samples, 2)  # Reduce batch_size on GPU
         for tensors in self.update({"batch_size": batch_size}):
             sample_batch, _, _, batch_index, labels = tensors
-            px_dispersion, px_rate = self.model.inference(sample_batch, batch_index=batch_index, y=labels,
-                                                          n_samples=n_samples)[1:3]
+            px_dispersion, px_rate, px_dropout = self.model.inference(sample_batch,
+                                                                      batch_index=batch_index,
+                                                                      y=labels,
+                                                                      n_samples=n_samples)[1:4]
 
             p = (px_rate / (px_rate + px_dispersion)).cpu()
             r = px_dispersion.cpu()
@@ -381,6 +383,12 @@ class Posterior:
             # l_train = Gamma(r, rate).sample()  # assert Gamma(r, rate).mean = px_rate
             # posterior = Poisson(l_train).sample()
             # '''
+
+            if zero_inflated:
+                p_zero = 1.0 / (1.0 + np.exp(px_dropout))
+                if np.random.rand() <= p_zero:
+                    X = 0.0
+
             original_list += [np.array(sample_batch.cpu())]
             posterior_list += [X]  # [np.array(posterior.cpu())]##
 
