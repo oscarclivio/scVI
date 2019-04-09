@@ -356,7 +356,7 @@ class Posterior:
         return imputed_list.squeeze()
 
     @torch.no_grad()
-    def generate(self, n_samples=100, genes=None, zero_inflated=False):  # with n_samples>1 return original list/ otherwose sequential
+    def generate(self, n_samples=100, genes=None, zero_inflated=False, batch_size=128):  # with n_samples>1 return original list/ otherwose sequential
         '''
         Return original_values as y and generated as x (for posterior density visualization)
         :param n_samples:
@@ -365,7 +365,7 @@ class Posterior:
         '''
         original_list = []
         posterior_list = []
-        batch_size = 128  # max(self.data_loader_kwargs['batch_size'] // n_samples, 2)  # Reduce batch_size on GPU
+        # max(self.data_loader_kwargs['batch_size'] // n_samples, 2)  # Reduce batch_size on GPU
         for tensors in self.update({"batch_size": batch_size}):
             sample_batch, _, _, batch_index, labels = tensors
             px_dispersion, px_rate, px_dropout = self.model.inference(sample_batch,
@@ -375,8 +375,9 @@ class Posterior:
 
             p = (px_rate / (px_rate + px_dispersion)).cpu()
             r = px_dispersion.cpu()
-            #
             l_train = np.random.gamma(r, p / (1 - p))
+            threshold = 1e18
+            l_train = np.minimum(l_train, threshold)
             X = np.random.poisson(l_train)
             # '''
             # In numpy (shape, scale) => (concentration, rate), with scale = p /(1 - p)
@@ -386,9 +387,10 @@ class Posterior:
             # '''
 
             if zero_inflated:
-                p_zero = 1.0 / (1.0 + np.exp(px_dropout))
-                if np.random.rand() <= p_zero:
-                    X = 0.0
+                px_dropout = np.array(px_dropout.cpu())
+                p_zero = 1.0 / (1.0 + np.exp(-px_dropout))
+                random_prob = np.random.random(p_zero.shape)
+                X[random_prob <= p_zero] = 0
 
             original_list += [np.array(sample_batch.cpu())]
             posterior_list += [X]  # [np.array(posterior.cpu())]##
