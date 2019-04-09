@@ -372,12 +372,20 @@ class Posterior:
                                                                       y=labels,
                                                                       n_samples=n_samples)[1:4]
 
-            p = (px_rate / (px_rate + px_dispersion)).cpu()
-            r = px_dispersion.cpu()
-            l_train = np.random.gamma(r, p / (1 - p))
-            threshold = 1e18
-            l_train = np.minimum(l_train, threshold)
-            X = np.random.poisson(l_train)
+            p = px_rate / (px_rate + px_dispersion)
+            r = px_dispersion
+            l_train = torch.distributions.Gamma(concentration=r, rate=(1-p)/p).sample()
+            l_train = torch.clamp(l_train, max=1e18)
+            X = torch.distributions.Poisson(l_train).sample().cpu().numpy()
+
+
+            # p = (px_rate / (px_rate + px_dispersion)).cpu()
+            # r = px_dispersion.cpu()
+            # l_train = np.random.gamma(r, p / (1 - p))
+            # threshold = 1e18
+            # l_train = np.minimum(l_train, threshold)
+            # X = np.random.poisson(l_train)
+
             # '''
             # In numpy (shape, scale) => (concentration, rate), with scale = p /(1 - p)
             # rate = (1 - p) / p  # = 1/scale # used in pytorch
@@ -386,8 +394,11 @@ class Posterior:
             # '''
 
             if zero_inflated:
-                px_dropout = np.array(px_dropout.cpu())
-                p_zero = 1.0 / (1.0 + np.exp(-px_dropout))
+                # px_dropout = np.array(px_dropout.cpu())
+                # p_zero = 1.0 / (1.0 + np.exp(-px_dropout))
+
+                p_zero = 1.0 / (1.0 + torch.exp(-px_dropout))
+                p_zero = p_zero.cpu().numpy()
                 random_prob = np.random.random(p_zero.shape)
                 X[random_prob <= p_zero] = 0
 
