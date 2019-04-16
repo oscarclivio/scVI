@@ -1,7 +1,8 @@
 from functools import partial
 from scipy.stats import ttest_1samp
 import pandas as pd
-
+import copy
+import numpy as np
 
 class Metric:
     def __init__(self, trainer, phi_name=None):
@@ -64,6 +65,15 @@ class LikelihoodMetric(Metric):
 class ImputationMetric(Metric):
     def __init__(self, trainer):
         super().__init__(trainer=trainer)
+        
+    def compute(self, n_samples_imputation=1):
+        
+        original_list, imputed_list = self.trainer.train_set.imputation_benchmark(verbose=True, n_samples=n_samples_imputation, show_plot=False)
+        
+        imputation_errors = np.abs(np.concatenate(original_list) - np.concatenate(imputed_list))
+        median_imputation_score = np.median(imputation_errors)
+        
+        return median_imputation_score
 
 
 class DifferentialExpressionMetric(Metric):
