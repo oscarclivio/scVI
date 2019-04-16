@@ -1,8 +1,7 @@
 from functools import partial
 from scipy.stats import ttest_1samp
-import pandas as pd
-import copy
 import numpy as np
+
 
 class Metric:
     def __init__(self, trainer, phi_name=None):
@@ -61,6 +60,11 @@ class LikelihoodMetric(Metric):
     def __init__(self, trainer):
         super().__init__(trainer=trainer)
 
+    def compute(self, verbose=False, n_mc_samples=1000):
+        ll = self.trainer.test_set.marginal_ll(verbose=verbose,
+                                               n_mc_samples=n_mc_samples)
+        return ll
+
 
 class ImputationMetric(Metric):
     def __init__(self, trainer):
@@ -101,7 +105,7 @@ class SummaryStatsMetric(Metric):
             self.stat = ttest_1samp
 
 
-class OutlierStatsMetric(Metric):
-    def __init__(self, trainer):
-        super().__init__(trainer=trainer)
-
+class OutlierStatsMetric(SummaryStatsMetric):
+    """
+    USELESS EASIER TO START FROM SUMMARYSTATSMETRIC
+    """
