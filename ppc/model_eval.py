@@ -5,6 +5,7 @@ from scvi.models import VAE
 
 import copy
 import pandas as pd
+from statsmodels.stats.multitest import multipletests
 from metrics import *
 
 
@@ -69,12 +70,39 @@ class ModelEval:
         self.res_data.to_csv(save_path, sep='\t')
 
 
-if __name__ == '__main__':
-    use_batches = False
-    my_dataset = CortexDataset()
+def statistic_metric(subdf, stats_key=None):
+    ser = subdf[stats_key]
+    ser = ser.mean(axis=1)
 
-    my_metrics = [
-        ('ll', LikelihoodMetric(trainer=None, n_mc_samples=10)),
+
+def outlier_metric(subdf, pvals_keys=None):
+    def outliers(pval_col, alpha=0.05, method='fdr_bh', use_alpha_new=True):
+        pval_col_corrected, alpha_new = multipletests(pval_col, alpha=alpha, method=method)[1:3]
+        alpha_boundary = alpha_new if use_alpha_new else alpha
+        return pval_col <= alpha_boundary
+
+    assert len(pvals_keys) == 2
+    key1, key2 = pvals_keys
+    # TODO: maybe change below
+    pvals1 = subdf[key1][:, 0]
+    pvals2 = subdf[key2][:, 0]
+    outliers1 = outliers(pvals1)
+    outliers2 = outliers(pvals2)
+
+    # TODO Verifier pas trompé
+    good1bad2 = (~outliers1) * outliers2
+    bad1good2 = outliers1 * (~outliers2)
+    return pd.Series([good1bad2.sum(), bad1good2.sum()])
+
+
+if __name__ == '__main__':
+    USE_BATCHES = False
+    MY_DATASET = CortexDataset()
+    N_EXPERIMENTS = 20
+    N_EPOCHS = 120
+    N_LL_MC_SAMPLES = 25
+    MY_METRICS = [
+        ('ll', LikelihoodMetric(trainer=None, n_mc_samples=N_LL_MC_SAMPLES)),
         ('imputation', ImputationMetric(trainer=None)),
         ('t_dropout', SummaryStatsMetric(trainer=None, stat_name='tstat', phi_name='dropout')),
         ('t_cv', SummaryStatsMetric(trainer=None, stat_name='tstat', phi_name='cv')),
@@ -82,15 +110,21 @@ if __name__ == '__main__':
 
 
     def my_model_fn(reconstruction_loss='zinb'):
-        return VAE(my_dataset.nb_genes, n_batch=my_dataset.n_batches * use_batches,
+        return VAE(MY_DATASET.nb_genes, n_batch=MY_DATASET.n_batches * USE_BATCHES,
                    dropout_rate=0.2, reconstruction_loss=reconstruction_loss)
 
-
-    def zimb_model():
+    def zinb_model():
         return my_model_fn('zinb')
 
+    def nb_model():
+        return my_model_fn('nb')
 
-    zinb_eval = ModelEval(model_fn=zimb_model,
-                          dataset=my_dataset,
-                          metrics=my_metrics)
-    zinb_eval.multi_train(n_experiments=5, n_epochs=5, corruption='uniform')
+    zinb_eval = ModelEval(model_fn=zinb_model,
+                          dataset=MY_DATASET,
+                          metrics=MY_METRICS)
+    zinb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform')
+
+    nb_eval = ModelEval(model_fn=nb_model,
+                        dataset=MY_DATASET,
+                        metrics=MY_METRICS)
+    nb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform')

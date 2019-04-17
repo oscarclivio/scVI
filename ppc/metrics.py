@@ -112,7 +112,8 @@ class SummaryStatsMetric(Metric):
         phi_gen_gene = self.phi(x_gen, axis=0)
 
         stat_phi, pvals = self.stat(phi_real_gene, phi_gen_gene, axis=0)
-        return {"stat_phi": stat_phi, "pvals": pvals}
+        return {"stat_phi": stat_phi, "pvals": pvals, "phi_gen_gene": phi_real_gene,
+                "phi_real_gene": phi_gen_gene}
 
     def init_stat(self, stat_name):
         if stat_name == 'tstat':
