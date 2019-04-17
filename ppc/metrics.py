@@ -93,9 +93,40 @@ class ImputationMetric(Metric):
 
 
 class DifferentialExpressionMetric(Metric):
-    def __init__(self, **kwargs):
+    def __init__(self, n_samples=300, M_permutation=40000, **kwargs):
         super().__init__(**kwargs)
+        self.n_samples = n_samples
+        self.M_permutation = 40000
         self.name = "differential_expression_metric"
+        
+    def compute(self):
+        
+        results = {}
+        results['bayes_factor_avg_per_gene_same_cells'] = []
+        results['bayes_factor_avg_per_gene_diff_cells'] = []
+        results['ratio_genes_detected_per_gene_diff_cells'] = []
+        
+        
+        all_labels = np.unique(self.trainer.gene_dataset.labels)
+        all_labels_significant = np.array([val for val in all_labels if (self.trainer.gene_dataset.labels == val).sum() >= 2])
+        for label1 in all_labels_significant:
+            for label2 in all_labels_significant:
+                cell_a_idx = (self.trainer.gene_dataset.labels == label1)
+                cell_b_idx = (self.trainer.gene_dataset.labels == label2)
+                st = self.trainer.train_set.differential_expression_score(cell_a_idx, cell_b_idx,
+                                                                          n_samples=self.n_samples,
+                                                                          M_permutation=self.M_permutation, all_stats=False)
+                
+                if label1 == label2:
+                    results['bayes_factor_avg_per_gene_same_cells'].append( np.abs(st) )
+                    
+                else:
+                    results['bayes_factor_avg_per_gene_diff_cells'].append(np.abs(st) )
+                    results['ratio_genes_detected_per_gene_diff_cells'].append( (np.abs(st) >= 3) )
+        
+        means_results = {'avg_' + key_res: np.mean(np.array(list_res), axis=0) for key_res, list_res in results.items()}
+        
+        return means_results
 
 
 class SummaryStatsMetric(Metric):
