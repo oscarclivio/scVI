@@ -106,6 +106,8 @@ if __name__ == '__main__':
         ('imputation', ImputationMetric(trainer=None)),
         ('t_dropout', SummaryStatsMetric(trainer=None, stat_name='tstat', phi_name='dropout')),
         ('t_cv', SummaryStatsMetric(trainer=None, stat_name='tstat', phi_name='cv')),
+        ('t_ratio', SummaryStatsMetric(trainer=None, stat_name='tstat', phi_name='ratio')),
+        ('t_ratio', DifferentialExpressionMetric(trainer=None, )),
     ]
 
 
