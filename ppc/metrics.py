@@ -3,7 +3,7 @@ from scipy.stats import ttest_1samp, ks_2samp
 import numpy as np
 
 class Metric:
-    def __init__(self, trainer, phi_name=None, n_sample_posterior=25, batch_size=32):
+    def __init__(self, trainer, tag="", phi_name=None, n_sample_posterior=25, batch_size=32):
         """
 
         :param trainer: scVI Trainer object instance
@@ -19,6 +19,9 @@ class Metric:
         self.n_sample_posterior = n_sample_posterior
         self.batch_size = batch_size
         self.init_phi(phi_name=phi_name)
+        
+        self.tag = tag
+        self.keys = []
 
     def compute(self):
         pass
@@ -36,6 +39,16 @@ class Metric:
                                                         zero_inflated=is_zero_inflated,
                                                         batch_size=self.batch_size)
         return x_gen.squeeze(), x_real
+
+    def output_dict(self, dict_to_output):
+        
+        new_dict = {self.tag + "_" + key: value for key,value in dict_to_output.items()}
+        
+        self.keys = list(new_dict.keys())
+            
+        return new_dict
+    
+        
 
     @staticmethod
     def phi_ratio(array, axis=None):
@@ -104,7 +117,7 @@ class LikelihoodMetric(Metric):
     def compute(self):
         ll = self.trainer.test_set.marginal_ll(verbose=self.verbose,
                                                n_mc_samples=self.n_mc_samples)
-        return {'ll': ll}
+        return self.output_dict({'ll': ll})
 
 
 class ImputationMetric(Metric):
@@ -120,7 +133,7 @@ class ImputationMetric(Metric):
         imputation_errors = np.abs(np.concatenate(original_list) - np.concatenate(imputed_list))
         median_imputation_score = np.median(imputation_errors)
 
-        return {'median_imputation_score': median_imputation_score}
+        return self.output_dict({'median_imputation_score': median_imputation_score})
 
 
 class DifferentialExpressionMetric(Metric):
@@ -157,7 +170,7 @@ class DifferentialExpressionMetric(Metric):
         means_results = {'avg_' + key_res: np.mean(np.array(list_res), axis=0)
                          for key_res, list_res in results.items()}
 
-        return means_results
+        return self.output_dict(means_results)
 
 
 class SummaryStatsMetric(Metric):
@@ -183,10 +196,10 @@ class SummaryStatsMetric(Metric):
         phi_gen_gene = self.phi(x_gen, axis=0)
 
         if self.stat_name == 'tstat':
-            # Computed for EACH gene
+            # Computed for EACH gene
             stat_phi, pvals = ttest_1samp(phi_real_gene, phi_gen_gene, axis=0)
-            return {"tstat_phi": stat_phi, "t_pvals": pvals, "phi_gen_gene": phi_real_gene,
-                    "phi_real_gene": phi_gen_gene}
+            return self.output_dict({"tstat_phi": stat_phi, "t_pvals": pvals, "phi_gen_gene": phi_real_gene,
+                                     "phi_real_gene": phi_gen_gene})
 
         elif self.stat_name == 'ks':
             # Computed accross ALL genes
@@ -194,10 +207,10 @@ class SummaryStatsMetric(Metric):
             assert phi_gen_gene_avg.shape == phi_real_gene.shape, \
                 (phi_gen_gene_avg.shape, phi_real_gene.shape)
             ks_stat, pval = ks_2samp(phi_gen_gene_avg, phi_real_gene)
-            return {
+            return self.output_dict({
                 "ks_stat": ks_stat,
                 "ks_pval": pval
-            }
+            })
         else:
             raise AttributeError('{} is not a valid statistic choice.', self.stat_name)
 
