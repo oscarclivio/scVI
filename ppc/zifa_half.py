@@ -117,7 +117,7 @@ class Encoder(nn.Module):
     def reparameterize(self, mu, var):
         return Normal(mu, var.sqrt()).rsample()
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor, *cat_list: int):
         r"""The forward computation for a single sample.
 
          #. Encodes the data into latent space using the encoder network
@@ -223,7 +223,7 @@ class DecoderSCVI(nn.Module):
         
         
         px_r = self.px_r_decoder(px) if dispersion == "gene-cell" else None
-        # alpha = self.alpha(px)
+        # alpha = self.alpha(px)
         return px_scale, px_r, px_rate, px_dropout#, alpha
 
 class VAE(nn.Module):
@@ -414,7 +414,7 @@ class VAE(nn.Module):
         """
         # Parameters for z latent distribution
 
-        # px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, alpha = self.inference(x, batch_index)
+        # px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library, alpha = self.inference(x, batch_index)
         px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library = self.inference(x, batch_index)
         
         # location_r = self.location_layer(locations)
