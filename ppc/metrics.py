@@ -209,8 +209,9 @@ class SummaryStatsMetric(Metric):
             ks_stat, pval = ks_2samp(phi_gen_gene_avg, phi_real_gene)
             return self.output_dict({
                 "ks_stat": ks_stat,
-                "ks_pval": pval
-            })
+                "ks_pval": pval,
+                "phi_gen_gene": phi_real_gene,
+                "phi_real_gene": phi_gen_gene})
         else:
             raise AttributeError('{} is not a valid statistic choice.', self.stat_name)
 
