@@ -516,8 +516,9 @@ class Posterior:
         if verbose:
             print("\nMedian of Median: %.4f\nMean of Median for each cell: %.4f" % (median_score, mean_score))
 
-        plot_imputation(np.concatenate(original_list), np.concatenate(imputed_list), show_plot=show_plot,
-                        title=os.path.join(save_path, title_plot))
+        if show_plot:
+            plot_imputation(np.concatenate(original_list), np.concatenate(imputed_list), show_plot=show_plot,
+                            title=os.path.join(save_path, title_plot))
         return original_list, imputed_list
 
     @torch.no_grad()

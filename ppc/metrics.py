@@ -127,7 +127,7 @@ class ImputationMetric(Metric):
         self.n_samples_imputation = n_samples_imputation
 
     def compute(self):
-        original_list, imputed_list = self.trainer.train_set.imputation_benchmark(verbose=True,
+        original_list, imputed_list = self.trainer.train_set.imputation_benchmark(verbose=False,
                                                                                   n_samples=self.n_samples_imputation,
                                                                                   show_plot=False)
         imputation_errors = np.abs(np.concatenate(original_list) - np.concatenate(imputed_list))
