@@ -4,9 +4,13 @@ from scvi.dataset import CortexDataset, RetinaDataset, HematoDataset, PbmcDatase
 from scvi.models import VAE
 
 import copy
+import json
+import argparse
 import pandas as pd
 from statsmodels.stats.multitest import multipletests
 from metrics import *
+from zifa_full import VAE as VAE_zifa_full
+from zifa_half import VAE as VAE_zifa_half
 
 
 class ModelEval:
@@ -23,33 +27,37 @@ class ModelEval:
         self.trainer = None
         self.res_data = None
 
-    def train(self, n_epochs, corruption=None, **kwargs):
+    def train(self, n_epochs, lr=1e-3, corruption=None, **kwargs):
         model = self.model_fn()
-        self.trainer = UnsupervisedTrainer(model, self.dataset, **kwargs)
-        self.trainer.train(n_epochs)
+        self.trainer = UnsupervisedTrainer(model, self.dataset,
+                                           # early_stopping_kwargs={
+                                           #     'early_stopping_metric': 'll',
+                                           #     'save_best_state_metric': 'll',
+                                           #     'patience': 15,
+                                           #     'threshold': 3},
+                                           **kwargs)
+        self.trainer.train(n_epochs, lr=lr)
 
         outputs = []
         imputation_is_in_metrics = False
-        for metric_tag, metric in self.metrics:
+        for metric in self.metrics:
             if metric.name != 'imputation_metric':
                 metric.reset_trainer(self.trainer)
                 res_dic = metric.compute()
-                new_dic = {metric_tag + '_' + k: v for k, v in res_dic.items()}
-                outputs.append(new_dic)
+                outputs.append(res_dic)
             else:
                 imputation_is_in_metrics = True
 
         if imputation_is_in_metrics:
             self.trainer = UnsupervisedTrainer(model, self.dataset, **kwargs)
             self.trainer.corrupt_posteriors(rate=0.1, corruption=corruption)
-            self.trainer.train(n_epochs)
+            self.trainer.train(n_epochs, lr=lr)
             self.trainer.uncorrupt_posteriors()
-            for metric_tag, metric in self.metrics:
+            for metric in self.metrics:
                 if metric.name == 'imputation_metric':
                     metric.reset_trainer(self.trainer)
                     res_dic = metric.compute()
-                    new_dic = {metric_tag + '_' + k: v for k, v in res_dic.items()}
-                    outputs.append(new_dic)
+                    outputs.append(res_dic)
 
         # Here outputs is a list of dictionnaries
         # We want to make sure that by merging them into a new dict
@@ -58,16 +66,21 @@ class ModelEval:
         assert len(res) == sum([len(di) for di in outputs])
         return res
 
-    def multi_train(self, n_experiments, n_epochs, corruption=None, **kwargs):
+    def multi_train(self, n_experiments, n_epochs, lr=1e-3, corruption=None, **kwargs):
         all_res = []
         for exp in range(n_experiments):
-            all_res.append(self.train(n_epochs, corruption, **kwargs))
+            all_res.append(self.train(n_epochs, corruption=corruption, lr=lr, **kwargs))
         self.res_data = pd.DataFrame(all_res)
 
     def write_csv(self, save_path):
         if self.res_data is None:
             raise AttributeError('No experiments yet. Use multitrain')
         self.res_data.to_csv(save_path, sep='\t')
+
+    def write_pickle(self, save_path):
+        if self.res_data is None:
+            raise AttributeError('No experiments yet. Use multitrain')
+        self.res_data.to_pickle(save_path)
 
 
 def statistic_metric(subdf, stats_key=None):
@@ -96,37 +109,114 @@ def outlier_metric(subdf, pvals_keys=None):
 
 
 if __name__ == '__main__':
-    USE_BATCHES = False
-    MY_DATASET = CortexDataset()
-    N_EXPERIMENTS = 20
-    N_EPOCHS = 120
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--dataset', type=str)
+    parser.add_argument('--number_genes', type=int, default=1200)
+    parser.add_argument('--nb_hyperparams_json', type=str)
+    parser.add_argument('--zinb_hyperparams_json', type=str)
+    args = parser.parse_args()
+
+    dataset_name = args.dataset
+    number_genes = args.number_genes
+
+    with open(args.nb_hyperparams_json) as file:
+        nb_hyperparams_str = file.read()
+        nb_hyperparams = json.loads(nb_hyperparams_str)
+        kl_nb = nb_hyperparams.pop('kl_weight')
+        lr_nb = nb_hyperparams.pop('lr')
+
+        print(nb_hyperparams)
+
+    with open(args.zinb_hyperparams_json) as file:
+        zinb_hyperparams_str = file.read()
+        zinb_hyperparams = json.loads(zinb_hyperparams_str)
+        kl_zinb = zinb_hyperparams.pop('kl_weight')
+        lr_zinb = zinb_hyperparams.pop('lr')
+
+    datasets_mapper = {
+        'pbmc': PbmcDataset,
+        'cortex': CortexDataset,
+        'retina': RetinaDataset,
+        'hemato': HematoDataset,
+        'brain_small': BrainSmallDataset
+    }
+
+    MY_DATASET = datasets_mapper[dataset_name]()
+    MY_DATASET.subsample_genes(new_n_genes=number_genes)
+
+    USE_BATCHES = True
+    N_EXPERIMENTS = 3
+    N_EPOCHS = 150
     N_LL_MC_SAMPLES = 25
     MY_METRICS = [
-        ('ll', LikelihoodMetric(trainer=None, n_mc_samples=N_LL_MC_SAMPLES)),
-        ('imputation', ImputationMetric(trainer=None)),
-        ('t_dropout', SummaryStatsMetric(trainer=None, stat_name='tstat', phi_name='dropout')),
-        ('t_cv', SummaryStatsMetric(trainer=None, stat_name='tstat', phi_name='cv')),
-        ('t_ratio', SummaryStatsMetric(trainer=None, stat_name='tstat', phi_name='ratio')),
-        ('t_ratio', DifferentialExpressionMetric(trainer=None, )),
+        LikelihoodMetric(tag='ll', trainer=None, n_mc_samples=N_LL_MC_SAMPLES),
+        ImputationMetric(tag='imputation', trainer=None),
+        SummaryStatsMetric(tag='t_dropout', trainer=None, stat_name='ks', phi_name='dropout'),
+        # SummaryStatsMetric(tag='t_cv', trainer=None, stat_name='ks', phi_name='cv'),
+        # SummaryStatsMetric(tag='t_ratio', trainer=None, stat_name='ks', phi_name='ratio'),
+        # ('diff', DifferentialExpressionMetric(trainer=None, )),
     ]
 
 
-    def my_model_fn(reconstruction_loss='zinb'):
+    def my_model_fn(reconstruction_loss, hyperparams: dict):
         return VAE(MY_DATASET.nb_genes, n_batch=MY_DATASET.n_batches * USE_BATCHES,
-                   dropout_rate=0.2, reconstruction_loss=reconstruction_loss)
+                   reconstruction_loss=reconstruction_loss, **hyperparams)
 
     def zinb_model():
-        return my_model_fn('zinb')
+        return my_model_fn('zinb', hyperparams=zinb_hyperparams)
 
     def nb_model():
-        return my_model_fn('nb')
+        return my_model_fn('nb', hyperparams=nb_hyperparams)
 
-    zinb_eval = ModelEval(model_fn=zinb_model,
-                          dataset=MY_DATASET,
-                          metrics=MY_METRICS)
-    zinb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform')
+    def zifa_half_fn():
+        return VAE_zifa_half(MY_DATASET.nb_genes, n_batch=MY_DATASET.n_batches * USE_BATCHES,
+                             decay_mode='gene')
 
-    nb_eval = ModelEval(model_fn=nb_model,
-                        dataset=MY_DATASET,
-                        metrics=MY_METRICS)
-    nb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform')
+    def zifa_full_fn():
+        return VAE_zifa_full(MY_DATASET.nb_genes, n_batch=MY_DATASET.n_batches * USE_BATCHES,
+                             decay_mode='gene')
+
+    zinb_eval = ModelEval(model_fn=zinb_model, dataset=MY_DATASET, metrics=MY_METRICS)
+    zinb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
+                          lr=lr_zinb, kl=kl_zinb)
+
+    nb_eval = ModelEval(model_fn=nb_model, dataset=MY_DATASET, metrics=MY_METRICS)
+    nb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
+                        lr=lr_nb, kl=kl_nb)
+
+    zifa_half_eval = ModelEval(model_fn=zifa_half_fn, dataset=MY_DATASET, metrics=MY_METRICS)
+    zifa_half_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform')
+
+    zifa_full_eval = ModelEval(model_fn=zifa_full_fn, dataset=MY_DATASET, metrics=MY_METRICS)
+    zifa_full_eval .multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform')
+
+
+
+    # save files
+    zinb_eval.write_csv('zinb_{}_hyperopt.csv'.format(dataset_name))
+    nb_eval.write_csv('nb_{}_hyperopt.csv'.format(dataset_name))
+    zifa_half_eval.write_csv('zifa_half_{}.csv'.format(dataset_name))
+    zifa_full_eval.write_csv('zifa_full_{}.csv'.format(dataset_name))
+
+    zinb_eval.write_csv('zinb_{}_hyperopt.csv'.format(dataset_name))
+    nb_eval.write_pickle('nb_{}_hyperopt.p'.format(dataset_name))
+    zifa_half_eval.write_pickle('zifa_half_{}.p'.format(dataset_name))
+    zifa_full_eval.write_pickle('zifa_full_{}.p'.format(dataset_name))
+
+    # def zifa_fn(decay_mode='gene', model='half'):
+    #     """
+    #     decay_mode = 'gene' or ''
+    #     model = 'half' or 'full'
+    #     """
+    #     if model == 'half':
+    #         return VAE_zifa_full(
+    #             MY_DATASET.nb_genes,
+    #             n_batch=MY_DATASET.n_batches * USE_BATCHES,
+    #             decay_mode=decay_mode
+    #         )
+    #     else:
+    #         return VAE_zifa_half(
+    #             MY_DATASET.nb_genes,
+    #             n_batch=MY_DATASET.n_batches * USE_BATCHES,
+    #             decay_mode=decay_mode
+    #         )
