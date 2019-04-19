@@ -145,7 +145,7 @@ if __name__ == '__main__':
     MY_DATASET.subsample_genes(new_n_genes=number_genes)
 
     USE_BATCHES = True
-    N_EXPERIMENTS = 3
+    N_EXPERIMENTS = 20
     N_EPOCHS = 150
     N_LL_MC_SAMPLES = 25
     MY_METRICS = [
@@ -198,7 +198,7 @@ if __name__ == '__main__':
     zifa_half_eval.write_csv('zifa_half_{}.csv'.format(dataset_name))
     zifa_full_eval.write_csv('zifa_full_{}.csv'.format(dataset_name))
 
-    zinb_eval.write_csv('zinb_{}_hyperopt.csv'.format(dataset_name))
+    zinb_eval.write_pickle('zinb_{}_hyperopt.p'.format(dataset_name))
     nb_eval.write_pickle('nb_{}_hyperopt.p'.format(dataset_name))
     zifa_half_eval.write_pickle('zifa_half_{}.p'.format(dataset_name))
     zifa_full_eval.write_pickle('zifa_full_{}.p'.format(dataset_name))
