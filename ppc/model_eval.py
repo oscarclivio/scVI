@@ -6,11 +6,13 @@ from scvi.models import VAE
 import copy
 import json
 import argparse
+import os
 import pandas as pd
 from statsmodels.stats.multitest import multipletests
 from metrics import *
 from zifa_full import VAE as VAE_zifa_full
 from zifa_half import VAE as VAE_zifa_half
+from synthetic_data import NBDataset, ZINBDataset, Mixed25Dataset, Mixed50Dataset, Mixed75Dataset
 
 
 class ModelEval:
@@ -27,14 +29,15 @@ class ModelEval:
         self.trainer = None
         self.res_data = None
 
-    def train(self, n_epochs, lr=1e-3, corruption=None, **kwargs):
+    def train(self, n_epochs, lr=1e-4, corruption=None, **kwargs):
         model = self.model_fn()
         self.trainer = UnsupervisedTrainer(model, self.dataset,
-                                           # early_stopping_kwargs={
-                                           #     'early_stopping_metric': 'll',
-                                           #     'save_best_state_metric': 'll',
-                                           #     'patience': 15,
-                                           #     'threshold': 3},
+                                           train_size=0.7, frequency=1,
+                                           early_stopping_kwargs={
+                                               'early_stopping_metric': 'll',
+                                               # 'save_best_state_metric': 'll',
+                                               'patience': 15,
+                                               'threshold': 3},
                                            **kwargs)
         self.trainer.train(n_epochs, lr=lr)
 
@@ -112,33 +115,45 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--dataset', type=str)
     parser.add_argument('--number_genes', type=int, default=1200)
-    parser.add_argument('--nb_hyperparams_json', type=str)
-    parser.add_argument('--zinb_hyperparams_json', type=str)
+    parser.add_argument('--nb_hyperparams_json', type=str, default=None)
+    parser.add_argument('--zinb_hyperparams_json', type=str, default=None)
     args = parser.parse_args()
 
     dataset_name = args.dataset
     number_genes = args.number_genes
 
-    with open(args.nb_hyperparams_json) as file:
-        nb_hyperparams_str = file.read()
-        nb_hyperparams = json.loads(nb_hyperparams_str)
-        kl_nb = nb_hyperparams.pop('kl_weight')
-        lr_nb = nb_hyperparams.pop('lr')
 
-        print(nb_hyperparams)
+    def read_json(json_path):
+        if json_path is not None:
+            with open(json_path) as file:
+                hyperparams_str = file.read()
+                hyperparams = json.loads(hyperparams_str)
+            kl = hyperparams.pop('kl_weight')
+            lr = hyperparams.pop('lr')
+        else:
+            hyperparams = {}
+            kl = 1
+            lr = 1e-4
+        return hyperparams, kl, lr
 
-    with open(args.zinb_hyperparams_json) as file:
-        zinb_hyperparams_str = file.read()
-        zinb_hyperparams = json.loads(zinb_hyperparams_str)
-        kl_zinb = zinb_hyperparams.pop('kl_weight')
-        lr_zinb = zinb_hyperparams.pop('lr')
+
+    if not os.path.exists(dataset_name):
+        os.makedirs(dataset_name)
+
+    nb_hyperparams, kl_nb, lr_nb = read_json(args.nb_hyperparams_json)
+    zinb_hyperparams, kl_zinb, lr_zinb = read_json(args.zinb_hyperparams_json)
 
     datasets_mapper = {
         'pbmc': PbmcDataset,
         'cortex': CortexDataset,
         'retina': RetinaDataset,
         'hemato': HematoDataset,
-        'brain_small': BrainSmallDataset
+        'brain_small': BrainSmallDataset,
+        'nb_dataset': NBDataset,
+        'zinb_dataset': ZINBDataset,
+        'mixed_25_dataset': Mixed25Dataset,
+        'mixed_50_dataset': Mixed50Dataset,
+        'mixed_75_dataset': Mixed75Dataset,
     }
 
     MY_DATASET = datasets_mapper[dataset_name]()
@@ -146,14 +161,14 @@ if __name__ == '__main__':
 
     USE_BATCHES = True
     N_EXPERIMENTS = 20
-    N_EPOCHS = 150
+    N_EPOCHS = 120
     N_LL_MC_SAMPLES = 25
     MY_METRICS = [
         LikelihoodMetric(tag='ll', trainer=None, n_mc_samples=N_LL_MC_SAMPLES),
         ImputationMetric(tag='imputation', trainer=None),
         SummaryStatsMetric(tag='t_dropout', trainer=None, stat_name='ks', phi_name='dropout'),
-        # SummaryStatsMetric(tag='t_cv', trainer=None, stat_name='ks', phi_name='cv'),
-        # SummaryStatsMetric(tag='t_ratio', trainer=None, stat_name='ks', phi_name='ratio'),
+        SummaryStatsMetric(tag='t_cv', trainer=None, stat_name='ks', phi_name='cv'),
+        SummaryStatsMetric(tag='t_ratio', trainer=None, stat_name='ks', phi_name='ratio'),
         # ('diff', DifferentialExpressionMetric(trainer=None, )),
     ]
 
@@ -193,15 +208,15 @@ if __name__ == '__main__':
 
 
     # save files
-    zinb_eval.write_csv('zinb_{}_hyperopt.csv'.format(dataset_name))
-    nb_eval.write_csv('nb_{}_hyperopt.csv'.format(dataset_name))
-    zifa_half_eval.write_csv('zifa_half_{}.csv'.format(dataset_name))
-    zifa_full_eval.write_csv('zifa_full_{}.csv'.format(dataset_name))
+    zinb_eval.write_csv(os.path.join(dataset_name, 'zinb_{}.csv'.format(dataset_name)))
+    nb_eval.write_csv(os.path.join(dataset_name, 'nb_{}.csv'.format(dataset_name)))
+    zifa_half_eval.write_csv(os.path.join(dataset_name, 'zifa_half_{}.csv'.format(dataset_name)))
+    zifa_full_eval.write_csv(os.path.join(dataset_name, 'zifa_full_{}.csv'.format(dataset_name)))
 
-    zinb_eval.write_pickle('zinb_{}_hyperopt.p'.format(dataset_name))
-    nb_eval.write_pickle('nb_{}_hyperopt.p'.format(dataset_name))
-    zifa_half_eval.write_pickle('zifa_half_{}.p'.format(dataset_name))
-    zifa_full_eval.write_pickle('zifa_full_{}.p'.format(dataset_name))
+    zinb_eval.write_pickle(os.path.join(dataset_name, 'zinb_{}.p'.format(dataset_name)))
+    nb_eval.write_pickle(os.path.join(dataset_name, 'nb_{}.p'.format(dataset_name)))
+    zifa_half_eval.write_pickle(os.path.join(dataset_name, 'zifa_half_{}.p'.format(dataset_name)))
+    zifa_full_eval.write_pickle(os.path.join(dataset_name, 'zifa_full_{}.p'.format(dataset_name)))
 
     # def zifa_fn(decay_mode='gene', model='half'):
     #     """
