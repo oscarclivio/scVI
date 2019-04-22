@@ -114,15 +114,16 @@ def outlier_metric(subdf, pvals_keys=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--dataset', type=str)
+    parser.add_argument('--n_experiments', type=int, default=10)
     parser.add_argument('--number_genes', type=int, default=1200)
     parser.add_argument('--nb_hyperparams_json', type=str, default=None)
     parser.add_argument('--zinb_hyperparams_json', type=str, default=None)
     parser.add_argument('--zifa_full_hyperparams_json', type=str, default=None)
-    parser.add_argument('--zifa_half_hyperparams_json', type=str, default=None)
     args = parser.parse_args()
 
     dataset_name = args.dataset
     number_genes = args.number_genes
+    n_experiments = args.n_experiments
 
 
     def read_json(json_path):
@@ -144,7 +145,6 @@ if __name__ == '__main__':
 
     nb_hyperparams, kl_nb, lr_nb = read_json(args.nb_hyperparams_json)
     zinb_hyperparams, kl_zinb, lr_zinb = read_json(args.zinb_hyperparams_json)
-    zifa_half_hyperparams, kl_zifa_half, lr_zifa_half = read_json(args.zifa_half_hyperparams_json)
     zifa_full_hyperparams, kl_zifa_full, lr_zifa_full = read_json(args.zifa_full_hyperparams_json)
 
     datasets_mapper = {
@@ -164,7 +164,7 @@ if __name__ == '__main__':
     MY_DATASET.subsample_genes(new_n_genes=number_genes)
 
     USE_BATCHES = True
-    N_EXPERIMENTS = 10
+    N_EXPERIMENTS = n_experiments
     N_EPOCHS = 120
     N_LL_MC_SAMPLES = 100
     MY_METRICS = [
@@ -188,29 +188,24 @@ if __name__ == '__main__':
     def nb_model():
         return my_model_fn('nb', hyperparams=nb_hyperparams)
 
-    def zifa_half_fn():
-        return VAE_zifa_half(MY_DATASET.nb_genes, n_batch=MY_DATASET.n_batches * USE_BATCHES,
-                             decay_mode='gene', **zifa_half_hyperparams)
-
     def zifa_full_fn():
         return VAE_zifa_full(MY_DATASET.nb_genes, n_batch=MY_DATASET.n_batches * USE_BATCHES,
                              decay_mode='gene', **zifa_full_hyperparams)
     
-    zinb_eval = ModelEval(model_fn=zinb_model, dataset=MY_DATASET, metrics=MY_METRICS)
-    zinb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
-                          lr=lr_zinb, kl=kl_zinb)
 
-    nb_eval = ModelEval(model_fn=nb_model, dataset=MY_DATASET, metrics=MY_METRICS)
-    nb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
-                        lr=lr_nb, kl=kl_nb)
         
-    zifa_half_eval = ModelEval(model_fn=zifa_half_fn, dataset=MY_DATASET, metrics=MY_METRICS)
-    zifa_half_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
-                               lr=lr_zifa_half, kl=kl_zifa_half)
-
     zifa_full_eval = ModelEval(model_fn=zifa_full_fn, dataset=MY_DATASET, metrics=MY_METRICS)
     zifa_full_eval .multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
                                 lr=lr_zifa_full, kl=kl_zifa_full)
+    
+    
+    nb_eval = ModelEval(model_fn=nb_model, dataset=MY_DATASET, metrics=MY_METRICS)
+    nb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
+                        lr=lr_nb, kl=kl_nb)
+    
+    zinb_eval = ModelEval(model_fn=zinb_model, dataset=MY_DATASET, metrics=MY_METRICS)
+    zinb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
+                          lr=lr_zinb, kl=kl_zinb)
 
 
 
@@ -221,12 +216,10 @@ if __name__ == '__main__':
     # save files
     zinb_eval.write_csv(os.path.join(dataset_name, 'zinb_{}.csv'.format(dataset_name)))
     nb_eval.write_csv(os.path.join(dataset_name, 'nb_{}.csv'.format(dataset_name)))
-    zifa_half_eval.write_csv(os.path.join(dataset_name, 'zifa_half_{}.csv'.format(dataset_name)))
     zifa_full_eval.write_csv(os.path.join(dataset_name, 'zifa_full_{}.csv'.format(dataset_name)))
 
     zinb_eval.write_pickle(os.path.join(dataset_name, 'zinb_{}.p'.format(dataset_name)))
     nb_eval.write_pickle(os.path.join(dataset_name, 'nb_{}.p'.format(dataset_name)))
-    zifa_half_eval.write_pickle(os.path.join(dataset_name, 'zifa_half_{}.p'.format(dataset_name)))
     zifa_full_eval.write_pickle(os.path.join(dataset_name, 'zifa_full_{}.p'.format(dataset_name)))
 
     # def zifa_fn(decay_mode='gene', model='half'):
