@@ -60,10 +60,8 @@ class Metric:
         """
         nb_zeros = (array.astype(int) == 0).sum(axis=axis)
         nb_non_zeros = (array.astype(int) != 0).sum(axis=axis)
-        if nb_non_zeros == 0:
-            avg_expression = 1e-4
-        else:
-            avg_expression = array.sum(axis=axis) / nb_non_zeros
+        avg_expression = 1e-4 * np.ones(nb_non_zeros.shape)
+        avg_expression[nb_non_zeros != 0] = array.sum(axis=axis)[nb_non_zeros != 0] / nb_non_zeros[nb_non_zeros != 0]
         return nb_zeros / avg_expression
 
     @staticmethod
@@ -89,6 +87,10 @@ class Metric:
         :param axis:
         :return:
         """
+        mean = array.mean(axis=axis)
+        if (mean == 0.).sum() > 0:
+            print("Zeros rows are here !! Size :", (mean == 0.).sum())
+        mean[mean == 0.] = 1e-4
         return array.std(axis=axis) / array.mean(axis=axis)
 
     def init_phi(self, phi_name):
