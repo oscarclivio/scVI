@@ -191,36 +191,25 @@ if __name__ == '__main__':
     def zifa_full_fn():
         return VAE_zifa_full(MY_DATASET.nb_genes, n_batch=MY_DATASET.n_batches * USE_BATCHES,
                              decay_mode='gene', **zifa_full_hyperparams)
-    
 
-        
-    zifa_full_eval = ModelEval(model_fn=zifa_full_fn, dataset=MY_DATASET, metrics=MY_METRICS)
-    zifa_full_eval .multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
-                                lr=lr_zifa_full, kl=kl_zifa_full)
-    
-    
     nb_eval = ModelEval(model_fn=nb_model, dataset=MY_DATASET, metrics=MY_METRICS)
     nb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
                         lr=lr_nb, kl=kl_nb)
+    nb_eval.write_csv(os.path.join(dataset_name, 'nb_{}.csv'.format(dataset_name)))
+    nb_eval.write_pickle(os.path.join(dataset_name, 'nb_{}.p'.format(dataset_name)))
     
     zinb_eval = ModelEval(model_fn=zinb_model, dataset=MY_DATASET, metrics=MY_METRICS)
     zinb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
                           lr=lr_zinb, kl=kl_zinb)
-
-
-
-    
-
-
-
-    # save files
     zinb_eval.write_csv(os.path.join(dataset_name, 'zinb_{}.csv'.format(dataset_name)))
-    nb_eval.write_csv(os.path.join(dataset_name, 'nb_{}.csv'.format(dataset_name)))
-    zifa_full_eval.write_csv(os.path.join(dataset_name, 'zifa_full_{}.csv'.format(dataset_name)))
-
     zinb_eval.write_pickle(os.path.join(dataset_name, 'zinb_{}.p'.format(dataset_name)))
-    nb_eval.write_pickle(os.path.join(dataset_name, 'nb_{}.p'.format(dataset_name)))
+
+    zifa_full_eval = ModelEval(model_fn=zifa_full_fn, dataset=MY_DATASET, metrics=MY_METRICS)
+    zifa_full_eval .multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
+                                lr=lr_zifa_full, kl=kl_zifa_full)
+    zifa_full_eval.write_csv(os.path.join(dataset_name, 'zifa_full_{}.csv'.format(dataset_name)))
     zifa_full_eval.write_pickle(os.path.join(dataset_name, 'zifa_full_{}.p'.format(dataset_name)))
+
 
     # def zifa_fn(decay_mode='gene', model='half'):
     #     """
