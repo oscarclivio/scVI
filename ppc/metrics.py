@@ -61,6 +61,8 @@ class Metric:
         nb_zeros = (array.astype(int) == 0).sum(axis=axis)
         nb_non_zeros = (array.astype(int) != 0).sum(axis=axis)
         avg_expression = 1e-4 * np.ones(nb_non_zeros.shape)
+        if (nb_non_zeros == 0).sum() > 0:
+            print("hum... Zeros rows are here !! Size :", (nb_non_zeros == 0.).sum())
         avg_expression[nb_non_zeros != 0] = array.sum(axis=axis)[nb_non_zeros != 0] / nb_non_zeros[nb_non_zeros != 0]
         return nb_zeros / avg_expression
 
@@ -91,7 +93,7 @@ class Metric:
         if (mean == 0.).sum() > 0:
             print("Zeros rows are here !! Size :", (mean == 0.).sum())
         mean[mean == 0.] = 1e-4
-        return array.std(axis=axis) / array.mean(axis=axis)
+        return array.std(axis=axis) / mean
 
     def init_phi(self, phi_name):
         if phi_name == 'ratio':
