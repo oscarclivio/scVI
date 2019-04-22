@@ -10,7 +10,8 @@ from hyperopt import fmin, tpe, hp, Trials, rand
 import scvi
 from scvi.dataset import CortexDataset
 from scvi.inference import UnsupervisedTrainer
-from scvi.models.vae import VAE
+from zifa_full import VAE as VAE_zifa_full
+from zifa_half import VAE as VAE_zifa_half
 from typing import Tuple
 from functools import partial
 from synthetic_data import ZINBDataset, NBDataset, Mixed25Dataset, Mixed50Dataset, Mixed75Dataset
@@ -44,6 +45,7 @@ datasets_mapper = {
     'mixed_50_dataset': Mixed50Dataset,
     'mixed_75_dataset': Mixed75Dataset,
 }
+
 gene_dataset = datasets_mapper[dataset_name]()
 # gene_dataset = BrainSmallDataset()
 gene_dataset.subsample_genes(new_n_genes=nb_genes)
@@ -62,7 +64,7 @@ def compute_criterion(
     threshold: int = 3,  # oscillating behaviour
 
     # misc
-    use_batches: bool = False,  # ?.?
+    use_batches: bool = True,  # ?.?
     use_cuda: bool = True,
 ) -> Tuple[scvi.inference.Posterior, np.ndarray]:
     """Train and return a scVI model and sample a latent space
@@ -90,15 +92,31 @@ def compute_criterion(
     print("Space dictionary : ", space)
 
     # Train a model
-    vae = VAE(
-        n_input=gene_dataset.nb_genes,
-        n_batch=gene_dataset.n_batches * use_batches,
-        n_latent=n_latent,
-        n_hidden=n_hidden,
-        n_layers=n_layers,
-        dropout_rate=dropout_rate,
-        reconstruction_loss=mode
-    )
+    if mode == "full":
+        
+        vae = VAE_zifa_full(
+            n_genes=gene_dataset.nb_genes,
+            n_batch=gene_dataset.n_batches * use_batches,
+            n_latent=n_latent,
+            n_hidden=n_hidden,
+            n_layers=n_layers,
+            dropout_rate=dropout_rate
+        )
+        
+    elif mode == "half":
+        
+        vae = VAE_zifa_half(
+            n_genes=gene_dataset.nb_genes,
+            n_batch=gene_dataset.n_batches * use_batches,
+            n_latent=n_latent,
+            n_hidden=n_hidden,
+            n_layers=n_layers,
+            dropout_rate=dropout_rate
+        )
+        
+    else:
+        
+        raise Exception("ZIFA model not recognized")
 
     trainer = UnsupervisedTrainer(
         vae,

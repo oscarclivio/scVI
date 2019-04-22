@@ -60,7 +60,10 @@ class Metric:
         """
         nb_zeros = (array.astype(int) == 0).sum(axis=axis)
         nb_non_zeros = (array.astype(int) != 0).sum(axis=axis)
-        avg_expression = array.sum(axis=axis) / nb_non_zeros
+        if nb_non_zeros == 0:
+            avg_expression = 1e-4
+        else:
+            avg_expression = array.sum(axis=axis) / nb_non_zeros
         return nb_zeros / avg_expression
 
     @staticmethod
@@ -118,8 +121,7 @@ class LikelihoodMetric(Metric):
         ll = self.trainer.test_set.marginal_ll(verbose=self.verbose,
                                                n_mc_samples=self.n_mc_samples)
         return self.output_dict({'ll': ll})
-
-
+    
 class ImputationMetric(Metric):
     def __init__(self, n_samples_imputation=1, **kwargs):
         super().__init__(**kwargs)
