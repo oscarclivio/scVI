@@ -1,6 +1,8 @@
 from functools import partial
 from scipy.stats import ttest_1samp, ks_2samp
 import numpy as np
+import torch
+
 
 class Metric:
     def __init__(self, trainer, tag="", phi_name=None, n_sample_posterior=25, batch_size=32):
@@ -32,6 +34,7 @@ class Metric:
     def plot(self):
         pass
 
+    @torch.no_grad()
     def generate(self):
         is_zero_inflated = self.trainer.model.reconstruction_loss == 'zinb'
         x_gen, x_real = self.trainer.train_set.generate(genes=None,
@@ -125,7 +128,8 @@ class LikelihoodMetric(Metric):
         ll = self.trainer.test_set.marginal_ll(verbose=self.verbose,
                                                n_mc_samples=self.n_mc_samples)
         return self.output_dict({'ll': ll})
-    
+
+
 class ImputationMetric(Metric):
     def __init__(self, n_samples_imputation=1, **kwargs):
         super().__init__(**kwargs)
@@ -204,8 +208,10 @@ class SummaryStatsMetric(Metric):
         if self.stat_name == 'tstat':
             # Computed for EACH gene
             stat_phi, pvals = ttest_1samp(phi_real_gene, phi_gen_gene, axis=0)
-            return self.output_dict({"tstat_phi": stat_phi, "t_pvals": pvals, "phi_gen_gene": phi_real_gene,
-                                     "phi_real_gene": phi_gen_gene})
+            return self.output_dict({"tstat_phi": stat_phi,
+                                     "t_pvals": pvals,
+                                     "phi_gen_gene": phi_gen_gene,
+                                     "phi_real_gene": phi_real_gene})
 
         elif self.stat_name == 'ks':
             # Computed accross ALL genes
@@ -216,8 +222,8 @@ class SummaryStatsMetric(Metric):
             return self.output_dict({
                 "ks_stat": ks_stat,
                 "ks_pval": pval,
-                "phi_gen_gene": phi_real_gene,
-                "phi_real_gene": phi_gen_gene})
+                "phi_gen_gene": phi_gen_gene,
+                "phi_real_gene": phi_real_gene})
         else:
             raise AttributeError('{} is not a valid statistic choice.', self.stat_name)
 
