@@ -15,6 +15,7 @@ from typing import Tuple
 from functools import partial
 from synthetic_data import ZINBDataset, NBDataset, Mixed25Dataset, Mixed50Dataset, Mixed75Dataset
 
+from zifa_full import VAE as VAE_zifa_full
 
 from scvi.dataset import CortexDataset, RetinaDataset, HematoDataset, PbmcDataset, \
     BrainSmallDataset
@@ -25,12 +26,15 @@ parser.add_argument('--mode', type=str)
 parser.add_argument('--dataset', type=str)
 parser.add_argument('--nb_genes', type=int)
 parser.add_argument('--max_evals', type=int)
+parser.add_argument('--use_batches', default=True,
+                    type=lambda x: (str(x).lower() == 'true'))
 args = parser.parse_args()
 
 dataset_name = args.dataset
 mode = args.mode
 nb_genes = args.nb_genes
 max_evals = args.max_evals
+use_batches = args.use_batches
 
 datasets_mapper = {
     'pbmc': PbmcDataset,
@@ -88,17 +92,30 @@ def compute_criterion(
     lr = space['lr']
     
     print("Space dictionary : ", space)
+    print("Use batches : ", use_batches)
 
     # Train a model
-    vae = VAE(
-        n_input=gene_dataset.nb_genes,
-        n_batch=gene_dataset.n_batches * use_batches,
-        n_latent=n_latent,
-        n_hidden=n_hidden,
-        n_layers=n_layers,
-        dropout_rate=dropout_rate,
-        reconstruction_loss=mode
-    )
+    if mode == "full":
+        
+        vae = VAE_zifa_full(
+            n_genes=gene_dataset.nb_genes,
+            n_batch=gene_dataset.n_batches * use_batches,
+            n_latent=n_latent,
+            n_hidden=n_hidden,
+            n_layers=n_layers,
+            dropout_rate=dropout_rate
+        )
+        
+    else:
+        vae = VAE(
+            n_input=gene_dataset.nb_genes,
+            n_batch=gene_dataset.n_batches * use_batches,
+            n_latent=n_latent,
+            n_hidden=n_hidden,
+            n_layers=n_layers,
+            dropout_rate=dropout_rate,
+            reconstruction_loss=mode
+        )
 
     trainer = UnsupervisedTrainer(
         vae,
@@ -116,7 +133,6 @@ def compute_criterion(
         },
     )
 
-    print(trainer.early_stopping)
 
     trainer.train(n_epochs=n_epochs,
                   lr=lr)
@@ -136,7 +152,7 @@ objective_func = partial(
         'threshold': 3,  # oscillating behaviour
         'n_epochs': 150,
         # misc
-        'use_batches': True,  # ?.?
+        'use_batches': use_batches,  # ?.?
         'use_cuda': True,
     }
 )
