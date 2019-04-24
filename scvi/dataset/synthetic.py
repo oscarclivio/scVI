@@ -42,3 +42,118 @@ class SyntheticRandomDataset(GeneExpressionDataset):  # The exact random paramet
         super().__init__(
             *GeneExpressionDataset.get_attributes_from_matrix(X_train, labels=labels_simlr)
         )
+
+
+class SyntheticDatasetCorr(GeneExpressionDataset):
+    def __init__(self, n_cells_cluster=100, n_clusters=5,
+                 n_genes_high=15, n_genes_total=50,
+                 weight_high=0.1, weight_low=0.01,
+                 lam_0=100., n_batches=1, n_labels=1, mode='mixed'):
+        """
+
+        :param n_cells_cluster: Number of cells in each cluster
+        :param n_clusters: Number of cell clusters
+        :param n_genes_high: Number of highly expressed genes for each cluster.
+        Other genes are still expressed but at a lower expression
+        The level expression for highly expressed genes follow the same distribution
+
+        :param n_genes_total: Number of genes in total
+        :param weight_high: Level weight for highly expressed genes
+        :param weight_low: Level weight for lowly expressed genes
+        :param lam_0: Proportionality in the Poisson distributions parameter
+        :param p_dropout: Probability of dropout (only makes sense if mode='zi'
+        or mode='mixed'
+        :param n_batches: (useless for now) Number of batches in dataset
+        :param n_labels: (useless for now) Number of labels
+        :param mode: Should be either
+            - 'nb': mode without zero inflation
+            - 'zi': mode including zero inflation for ALL genes
+            -'mixed': mode in which SOME genes are Zero-Inflated while some other are not
+            The ratio_genes_zi parameter allow to control the proportion of genes that are going
+            to be ZI
+        :param ratio_genes_zi: Proportion of ZI genes
+        """
+
+        assert mode in ['mixed', 'zi', 'nb'], 'Mode {} not recognized'.format(mode)
+        np.random.seed(0)
+
+        if n_genes_total % n_clusters > 0:
+            print("Warning, clusters have inequal sizes")
+
+        if n_genes_high > (n_genes_total // n_clusters):
+            print("Overlap of", n_genes_high - (n_genes_total // n_clusters), "genes")
+
+        # Generate data before dropout
+        batch_size = n_cells_cluster * n_clusters
+        expression_mat = np.ones((n_batches, batch_size, n_genes_total))
+
+        self.batch_size = batch_size
+        self.n_batches = n_batches
+        self.n_genes_total = n_genes_total
+
+        labels = np.ones((n_batches, batch_size, 1))
+
+        # For each cell cluster, some genes have a high expression, the rest
+        # has a low expression. The scope of high expression genes "moves"
+        # with the cluster
+        for cluster in range(n_clusters):
+            ind_first_gene_cluster = cluster * (n_genes_total // n_clusters)
+            ind_last_high_gene_cluster = ind_first_gene_cluster + n_genes_high
+
+            # Weights in a cluster to create highly-expressed and low-expressed genes
+            weights = weight_low * np.ones((n_genes_total,))
+            weights[ind_first_gene_cluster:ind_last_high_gene_cluster] = weight_high
+            weights /= weights.sum()
+
+            exprs = np.random.poisson(lam_0 * weights, size=(n_batches, n_cells_cluster,
+                                                             n_genes_total))
+            expression_mat[:, cluster * n_cells_cluster:(cluster + 1) * n_cells_cluster, :] = exprs
+            labels[:, cluster * n_cells_cluster:(cluster + 1) * n_cells_cluster, :] = cluster
+
+        # Apply dropout depending on the mode
+
+        new_data = self.mask(expression_mat)
+
+        super().__init__(
+            *GeneExpressionDataset.get_attributes_from_list(new_data, list_labels=labels),
+            gene_names=np.arange(n_genes_total).astype(np.str))
+
+    def mask(self, data):
+        return data
+
+
+class ZISyntheticDatasetCorr(SyntheticDatasetCorr):
+    def __init__(self, dropout_coef=1.0, lam_dropout=1.0, **kwargs):
+        self.dropout_coef = dropout_coef
+        self.lam_dropout = lam_dropout
+        super(ZISyntheticDatasetCorr, self).__init__(**kwargs)
+
+    def mask(self, data):
+        p_dropout = self.dropout_coef * np.exp(-self.lam_dropout * (data**2))
+        # Probability of failure
+        mask = np.random.binomial(n=1, p=1 - p_dropout,
+                                  size=(self.n_batches, self.batch_size, self.n_genes_total))
+        return data * mask
+
+
+# class MixedSyntheticDatasetCorr(SyntheticDatasetCorr):
+#     def __init__(self, p_dropout=0.2, ratio_genes_zi=0.5, **kwargs):
+#         self.p_dropout = p_dropout
+#         self.ratio_genes_zi = ratio_genes_zi
+#         self.zi_genes_idx = None
+#         super(MixedSyntheticDatasetCorr, self).__init__(**kwargs)
+#
+#     def mask(self, data):
+#         assert self.ratio_genes_zi is not None
+#         assert 0.0 <= self.ratio_genes_zi <= 1.
+#         n_genes_zi = int(self.n_genes_total * self.ratio_genes_zi)
+#
+#         submask = np.random.binomial(n=1, p=1-self.p_dropout,
+#                                      size=(self.n_batches, self.batch_size, n_genes_zi))
+#         mask = np.ones_like(data)
+#         random_permutation = np.random.permutation(np.arange(self.n_genes_total))
+#         self.zi_genes_idx = random_permutation[:n_genes_zi]
+#         mask[:, :, random_permutation[:n_genes_zi]] = submask
+#
+#         return data * mask
+
