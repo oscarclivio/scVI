@@ -69,13 +69,13 @@ def gene_specific_ll(vae, posterior):
         px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library = vae.inference(
             sample_batch, batch_index)
         if rec_loss_name == 'nb':
-            batch_ll = log_zinb_positive(sample_batch, px_rate, px_r, return_gene_specific=True)
+            batch_ll = log_nb_positive(sample_batch, px_rate, px_r, return_gene_specific=True)
         elif rec_loss_name == 'zinb':
             batch_ll = log_zinb_positive(sample_batch, px_rate, px_r, px_dropout, return_gene_specific=True)
 
-        gene_lls += torch.sum(batch_ll, dim=0)  # Sum over batches
+        gene_lls += torch.sum(batch_ll, dim=0)  # Sum over batches
     res = gene_lls / overall_len
-    return res.cpu().numpy()
+    return - res.cpu().numpy()
 
 
 def log_zinb_positive(x, mu, theta, pi, eps=1e-8, return_gene_specific=False):

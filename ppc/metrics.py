@@ -2,6 +2,7 @@ from functools import partial
 from scipy.stats import ttest_1samp, ks_2samp
 import numpy as np
 import torch
+from scvi.models.log_likelihood import gene_specific_ll
 
 
 class Metric:
@@ -128,7 +129,18 @@ class LikelihoodMetric(Metric):
         ll = self.trainer.test_set.marginal_ll(verbose=self.verbose,
                                                n_mc_samples=self.n_mc_samples)
         return self.output_dict({'ll': ll})
+    
+class GeneSpecificLikelihoodMetric(Metric):
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "gene_specific_likelihood"
 
+    def compute(self):
+        
+        lls = gene_specific_ll(self.trainer.model, self.trainer.test_set)
+        
+        return self.output_dict({'gene_ll': lls})
 
 class ImputationMetric(Metric):
     def __init__(self, n_samples_imputation=1, **kwargs):
