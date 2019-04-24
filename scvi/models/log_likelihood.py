@@ -54,7 +54,31 @@ def compute_marginal_log_likelihood(vae, posterior, n_samples_mc=100):
     return - log_lkl / n_samples
 
 
-def log_zinb_positive(x, mu, theta, pi, eps=1e-8):
+@torch.no_grad()
+def gene_specific_ll(vae, posterior):
+    rec_loss_name = vae.reconstruction_loss
+    if rec_loss_name not in ['zinb', 'nb']:
+        raise AttributeError('Reconstruction loss {} unknown'.format(vae.reconstruction_loss))
+    gene_lls = torch.zeros(posterior.gene_dataset.nb_genes)
+    if posterior.use_cuda:
+        gene_lls = gene_lls.cuda()
+    overall_len = 0
+    for tensors in posterior.sequential():
+        sample_batch, _, _, batch_index, labels = tensors
+        overall_len += sample_batch.size(0)
+        px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, library = vae.inference(
+            sample_batch, batch_index)
+        if rec_loss_name == 'nb':
+            batch_ll = log_zinb_positive(sample_batch, px_rate, px_r, return_gene_specific=True)
+        elif rec_loss_name == 'zinb':
+            batch_ll = log_zinb_positive(sample_batch, px_rate, px_r, px_dropout, return_gene_specific=True)
+
+        gene_lls += torch.sum(batch_ll, dim=0)  # Sum over batches
+    res = gene_lls / overall_len
+    return res.cpu().numpy()
+
+
+def log_zinb_positive(x, mu, theta, pi, eps=1e-8, return_gene_specific=False):
     """
     Note: All inputs are torch Tensors
     log likelihood (scalar) of a minibatch according to a zinb model.
@@ -89,11 +113,13 @@ def log_zinb_positive(x, mu, theta, pi, eps=1e-8):
     mul_case_non_zero = torch.mul((x > eps).type(torch.float32), case_non_zero)
 
     res = mul_case_zero + mul_case_non_zero
+    if return_gene_specific:
+        return res
+    else:
+        return torch.sum(res, dim=-1)
 
-    return torch.sum(res, dim=-1)
 
-
-def log_nb_positive(x, mu, theta, eps=1e-8):
+def log_nb_positive(x, mu, theta, eps=1e-8, return_gene_specific=False):
     """
     Note: All inputs should be torch Tensors
     log likelihood (scalar) of a minibatch according to a nb model.
@@ -113,5 +139,7 @@ def log_nb_positive(x, mu, theta, eps=1e-8):
         torch.lgamma(x + theta) - \
         torch.lgamma(theta) - \
         torch.lgamma(x + 1)
-
-    return torch.sum(res, dim=-1)
+    if return_gene_specific:
+        return res
+    else:
+        return torch.sum(res, dim=-1)
