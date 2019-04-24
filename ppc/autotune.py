@@ -14,6 +14,8 @@ from scvi.models.vae import VAE
 from typing import Tuple
 from functools import partial
 from synthetic_data import ZINBDataset, NBDataset, Mixed25Dataset, Mixed50Dataset, Mixed75Dataset
+from synthetic_data import CorrMixed25Dataset, CorrMixed50Dataset, CorrMixed75Dataset, \
+    CorrNBDataset, CorrZINBDataset
 
 from zifa_full import VAE as VAE_zifa_full
 
@@ -47,6 +49,12 @@ datasets_mapper = {
     'mixed_25_dataset': Mixed25Dataset,
     'mixed_50_dataset': Mixed50Dataset,
     'mixed_75_dataset': Mixed75Dataset,
+
+    'corr_nb_dataset': CorrNBDataset,
+    'corr_zinb_dataset': CorrZINBDataset,
+    'corr_mixed_25_dataset': CorrMixed25Dataset,
+    'corr_mixed_50_dataset': CorrMixed50Dataset,
+    'corr_mixed_75_dataset': CorrMixed75Dataset,
 }
 gene_dataset = datasets_mapper[dataset_name]()
 # gene_dataset = BrainSmallDataset()
