@@ -13,14 +13,11 @@ from scvi.inference import UnsupervisedTrainer
 from scvi.models.vae import VAE
 from typing import Tuple
 from functools import partial
-from synthetic_data import ZINBDataset, NBDataset, Mixed25Dataset, Mixed50Dataset, Mixed75Dataset
-from synthetic_data import CorrMixed25Dataset, CorrMixed50Dataset, CorrMixed75Dataset, \
-    CorrNBDataset, CorrZINBDataset
 
 from zifa_full import VAE as VAE_zifa_full
 
 from scvi.dataset import CortexDataset, RetinaDataset, HematoDataset, PbmcDataset, \
-    BrainSmallDataset
+    BrainSmallDataset, ZISyntheticDatasetCorr, SyntheticDatasetCorr
 
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -44,17 +41,14 @@ datasets_mapper = {
     'retina': RetinaDataset,
     'hemato': HematoDataset,
     'brain_small': BrainSmallDataset,
-    'nb_dataset': NBDataset,
-    'zinb_dataset': ZINBDataset,
-    'mixed_25_dataset': Mixed25Dataset,
-    'mixed_50_dataset': Mixed50Dataset,
-    'mixed_75_dataset': Mixed75Dataset,
+    # 'nb_dataset': NBDataset,
+    # 'zinb_dataset': ZINBDataset,
+    # 'mixed_25_dataset': Mixed25Dataset,
+    # 'mixed_50_dataset': Mixed50Dataset,
+    # 'mixed_75_dataset': Mixed75Dataset,
 
-    'corr_nb_dataset': CorrNBDataset,
-    'corr_zinb_dataset': CorrZINBDataset,
-    'corr_mixed_25_dataset': CorrMixed25Dataset,
-    'corr_mixed_50_dataset': CorrMixed50Dataset,
-    'corr_mixed_75_dataset': CorrMixed75Dataset,
+    'nb_dataset': SyntheticDatasetCorr,
+    'zi_dataset': ZISyntheticDatasetCorr,
 }
 gene_dataset = datasets_mapper[dataset_name]()
 # gene_dataset = BrainSmallDataset()
@@ -140,8 +134,6 @@ def compute_criterion(
             'threshold': threshold,
         },
     )
-
-
     trainer.train(n_epochs=n_epochs,
                   lr=lr)
 
