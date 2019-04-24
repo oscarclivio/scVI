@@ -47,8 +47,8 @@ datasets_mapper = {
     # 'mixed_50_dataset': Mixed50Dataset,
     # 'mixed_75_dataset': Mixed75Dataset,
 
-    'nb_dataset': SyntheticDatasetCorr,
-    'zi_dataset': ZISyntheticDatasetCorr,
+    'corr_nb_dataset': SyntheticDatasetCorr,
+    'corr_zinb_dataset': ZISyntheticDatasetCorr,
 }
 gene_dataset = datasets_mapper[dataset_name]()
 # gene_dataset = BrainSmallDataset()
