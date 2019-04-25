@@ -240,6 +240,23 @@ class SummaryStatsMetric(Metric):
             raise AttributeError('{} is not a valid statistic choice.', self.stat_name)
 
 
+class ZIFAParamsMetric(Metric):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "zifa_params_metric"
+
+    @torch.no_grad()
+    def compute(self):
+        outputs = {}
+        if hasattr(self.trainer.model, 'decoder'):
+            if hasattr(self.trainer.model.decoder, 'decay'):
+                outputs['decay_lam'] = torch.exp(self.trainer.model.decoder.decay).cpu().numpy()
+            if hasattr(self.trainer.model.decoder, 'decay_bias'):
+                outputs['decay_coef'] = torch.exp(- torch.exp(self.trainer.model.decoder.decay_bias)).cpu().numpy()
+        return self.output_dict(outputs)
+
+
+
 class OutlierStatsMetric(SummaryStatsMetric):
     """
     USELESS EASIER TO START FROM SUMMARYSTATSMETRIC
