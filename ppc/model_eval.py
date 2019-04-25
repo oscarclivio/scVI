@@ -1,6 +1,6 @@
 from scvi.inference.inference import UnsupervisedTrainer
 from scvi.dataset import CortexDataset, RetinaDataset, HematoDataset, PbmcDataset, \
-    BrainSmallDataset
+    BrainSmallDataset, ZISyntheticDatasetCorr, SyntheticDatasetCorr
 from scvi.models import VAE
 
 import copy
@@ -11,8 +11,7 @@ import pandas as pd
 from statsmodels.stats.multitest import multipletests
 from metrics import *
 from zifa_full import VAE as VAE_zifa_full
-from zifa_half import VAE as VAE_zifa_half
-from synthetic_data import NBDataset, ZINBDataset, Mixed25Dataset, Mixed50Dataset, Mixed75Dataset
+# from synthetic_data import NBDataset, ZINBDataset, Mixed25Dataset, Mixed50Dataset, Mixed75Dataset
 
 
 class ModelEval:
@@ -116,8 +115,7 @@ if __name__ == '__main__':
     parser.add_argument('--dataset', type=str)
     parser.add_argument('--n_experiments', type=int, default=10)
     parser.add_argument('--number_genes', type=int, default=1200)
-    parser.add_argument('--use_batches', default=True,
-                        type=lambda x: (str(x).lower() == 'true'))
+    parser.add_argument('--use_batches', default=True, type=lambda x: (str(x).lower() == 'true'))
     parser.add_argument('--nb_hyperparams_json', type=str, default=None)
     parser.add_argument('--zinb_hyperparams_json', type=str, default=None)
     parser.add_argument('--zifa_full_hyperparams_json', type=str, default=None)
@@ -157,11 +155,14 @@ if __name__ == '__main__':
         'retina': RetinaDataset,
         'hemato': HematoDataset,
         'brain_small': BrainSmallDataset,
-        'nb_dataset': NBDataset,
-        'zinb_dataset': ZINBDataset,
-        'mixed_25_dataset': Mixed25Dataset,
-        'mixed_50_dataset': Mixed50Dataset,
-        'mixed_75_dataset': Mixed75Dataset,
+        # 'nb_dataset': NBDataset,
+        # 'zinb_dataset': ZINBDataset,
+        # 'mixed_25_dataset': Mixed25Dataset,
+        # 'mixed_50_dataset': Mixed50Dataset,
+        # 'mixed_75_dataset': Mixed75Dataset,
+
+        'corr_nb_dataset': SyntheticDatasetCorr,
+        'corr_zinb_dataset': ZISyntheticDatasetCorr,
     }
 
     MY_DATASET = datasets_mapper[dataset_name]()
@@ -177,8 +178,6 @@ if __name__ == '__main__':
         SummaryStatsMetric(tag='t_dropout', trainer=None, stat_name='ks', phi_name='dropout'),
         SummaryStatsMetric(tag='t_cv', trainer=None, stat_name='ks', phi_name='cv'),
         SummaryStatsMetric(tag='t_ratio', trainer=None, stat_name='ks', phi_name='ratio')
-        #DifferentialExpressionMetric(tag='de',trainer=None),
-        # ('diff', DifferentialExpressionMetric(trainer=None, )),
     ]
 
 
@@ -206,7 +205,6 @@ if __name__ == '__main__':
     nb_eval.write_csv(os.path.join(dataset_name, 'nb_{}.csv'.format(dataset_name)))
     nb_eval.write_pickle(os.path.join(dataset_name, 'nb_{}.p'.format(dataset_name)))
 
-
     print("Working on ZINB")
     zinb_eval = ModelEval(model_fn=zinb_model, dataset=MY_DATASET, metrics=MY_METRICS)
     zinb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
@@ -214,37 +212,9 @@ if __name__ == '__main__':
     zinb_eval.write_csv(os.path.join(dataset_name, 'zinb_{}.csv'.format(dataset_name)))
     zinb_eval.write_pickle(os.path.join(dataset_name, 'zinb_{}.p'.format(dataset_name)))
 
-
     print("Working on ZIFA")
     zifa_full_eval = ModelEval(model_fn=zifa_full_fn, dataset=MY_DATASET, metrics=MY_METRICS)
     zifa_full_eval .multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
                                 lr=lr_zifa_full, kl=kl_zifa_full)
     zifa_full_eval.write_csv(os.path.join(dataset_name, 'zifa_full_{}.csv'.format(dataset_name)))
     zifa_full_eval.write_pickle(os.path.join(dataset_name, 'zifa_full_{}.p'.format(dataset_name)))
-    
-    
-
-
- 
-
-
-    
-
-
-    # def zifa_fn(decay_mode='gene', model='half'):
-    #     """
-    #     decay_mode = 'gene' or ''
-    #     model = 'half' or 'full'
-    #     """
-    #     if model == 'half':
-    #         return VAE_zifa_full(
-    #             MY_DATASET.nb_genes,
-    #             n_batch=MY_DATASET.n_batches * USE_BATCHES,
-    #             decay_mode=decay_mode
-    #         )
-    #     else:
-    #         return VAE_zifa_half(
-    #             MY_DATASET.nb_genes,
-    #             n_batch=MY_DATASET.n_batches * USE_BATCHES,
-    #             decay_mode=decay_mode
-    #         )
