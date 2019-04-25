@@ -174,6 +174,8 @@ if __name__ == '__main__':
     N_LL_MC_SAMPLES = 100
     MY_METRICS = [
         LikelihoodMetric(tag='ll', trainer=None, n_mc_samples=N_LL_MC_SAMPLES),
+        GeneSpecificLikelihoodMetric(tag='gene_ll', trainer=None),
+        ZIFAParamsMetric(tag='zifa_params', trainer=None),
         ImputationMetric(tag='imputation', trainer=None),
         SummaryStatsMetric(tag='t_dropout', trainer=None, stat_name='ks', phi_name='dropout'),
         SummaryStatsMetric(tag='t_cv', trainer=None, stat_name='ks', phi_name='cv'),
@@ -197,7 +199,16 @@ if __name__ == '__main__':
 
 
     print("Use batches : ", USE_BATCHES)
-    
+
+
+    print("Working on ZIFA")
+    zifa_full_eval = ModelEval(model_fn=zifa_full_fn, dataset=MY_DATASET, metrics=MY_METRICS)
+    zifa_full_eval .multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
+                                lr=lr_zifa_full, kl=kl_zifa_full)
+    zifa_full_eval.write_csv(os.path.join(dataset_name, 'zifa_full_{}.csv'.format(dataset_name)))
+    zifa_full_eval.write_pickle(os.path.join(dataset_name, 'zifa_full_{}.p'.format(dataset_name)))
+
+
     print("Working on NB")
     nb_eval = ModelEval(model_fn=nb_model, dataset=MY_DATASET, metrics=MY_METRICS)
     nb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
@@ -211,10 +222,3 @@ if __name__ == '__main__':
                           lr=lr_zinb, kl=kl_zinb)
     zinb_eval.write_csv(os.path.join(dataset_name, 'zinb_{}.csv'.format(dataset_name)))
     zinb_eval.write_pickle(os.path.join(dataset_name, 'zinb_{}.p'.format(dataset_name)))
-
-    print("Working on ZIFA")
-    zifa_full_eval = ModelEval(model_fn=zifa_full_fn, dataset=MY_DATASET, metrics=MY_METRICS)
-    zifa_full_eval .multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
-                                lr=lr_zifa_full, kl=kl_zifa_full)
-    zifa_full_eval.write_csv(os.path.join(dataset_name, 'zifa_full_{}.csv'.format(dataset_name)))
-    zifa_full_eval.write_pickle(os.path.join(dataset_name, 'zifa_full_{}.p'.format(dataset_name)))
