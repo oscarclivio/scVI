@@ -163,6 +163,8 @@ if __name__ == '__main__':
 
         'corr_nb_dataset': SyntheticDatasetCorr,
         'corr_zinb_dataset': ZISyntheticDatasetCorr,
+        'corr_zinb_dataset_strong': partial(ZISyntheticDatasetCorr, dropout_coef=0.95, lam_dropout=0.5),
+
     }
 
     MY_DATASET = datasets_mapper[dataset_name]()
