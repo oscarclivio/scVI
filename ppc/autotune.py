@@ -47,9 +47,14 @@ datasets_mapper = {
     # 'mixed_50_dataset': Mixed50Dataset,
     # 'mixed_75_dataset': Mixed75Dataset,
 
-    'corr_nb_dataset': SyntheticDatasetCorr,
-    'corr_zinb_dataset': ZISyntheticDatasetCorr,
-}
+        'corr_nb_dataset': SyntheticDatasetCorr,
+        'corr_zinb_dataset': ZISyntheticDatasetCorr,
+        'corr_zinb_dataset_strong': partial(ZISyntheticDatasetCorr, dropout_coef=0.95, lam_dropout=0.5),
+        'corr_zinb_dataset_unif_0_6': partial(ZISyntheticDatasetCorr, dropout_coef=0.6, lam_dropout=0.),
+
+    }
+
+
 gene_dataset = datasets_mapper[dataset_name]()
 # gene_dataset = BrainSmallDataset()
 gene_dataset.subsample_genes(new_n_genes=nb_genes)
