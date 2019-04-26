@@ -47,10 +47,15 @@ datasets_mapper = {
     # 'mixed_50_dataset': Mixed50Dataset,
     # 'mixed_75_dataset': Mixed75Dataset,
 
-        'corr_nb_dataset': SyntheticDatasetCorr,
-        'corr_zinb_dataset': ZISyntheticDatasetCorr,
-        'corr_zinb_dataset_strong': partial(ZISyntheticDatasetCorr, dropout_coef=0.95, lam_dropout=0.5),
-        'corr_zinb_dataset_unif_0_6': partial(ZISyntheticDatasetCorr, dropout_coef=0.6, lam_dropout=0.),
+    'corr_nb_dataset': SyntheticDatasetCorr,
+    'corr_zinb_dataset': ZISyntheticDatasetCorr,
+    'corr_zinb_dataset_strong': partial(ZISyntheticDatasetCorr, dropout_coef=0.95, lam_dropout=0.5),
+    'corr_zinb_dataset_unif_0_6': partial(ZISyntheticDatasetCorr, dropout_coef=0.6, lam_dropout=0.),
+    'corr_zinb_dataset_unif_0_6_5': partial(ZISyntheticDatasetCorr, dropout_coef=0.65, lam_dropout=0.),
+    'corr_zinb_dataset_unif_0_7': partial(ZISyntheticDatasetCorr, dropout_coef=0.7, lam_dropout=0.),
+    'corr_zinb_dataset_zifa_0_9': partial(ZISyntheticDatasetCorr, dropout_coef=0.9, lam_dropout=0.5),
+    'corr_zinb_dataset_zifa_0_8': partial(ZISyntheticDatasetCorr, dropout_coef=0.8, lam_dropout=0.5),
+    'corr_zinb_dataset_zifa_0_7': partial(ZISyntheticDatasetCorr, dropout_coef=0.7, lam_dropout=0.5),
 
     }
 
