@@ -31,7 +31,7 @@ class ModelEval:
     def train(self, n_epochs, lr=1e-4, corruption=None, **kwargs):
         model = self.model_fn()
         self.trainer = UnsupervisedTrainer(model, self.dataset,
-                                           train_size=0.7, frequency=1,
+                                           train_size=0.8, frequency=1,
                                            early_stopping_kwargs={
                                                'early_stopping_metric': 'll',
                                                # 'save_best_state_metric': 'll',
@@ -149,6 +149,11 @@ if __name__ == '__main__':
     zinb_hyperparams, kl_zinb, lr_zinb = read_json(args.zinb_hyperparams_json)
     zifa_full_hyperparams, kl_zifa_full, lr_zifa_full = read_json(args.zifa_full_hyperparams_json)
 
+    print(nb_hyperparams, kl_nb, lr_nb)
+    print(zinb_hyperparams, kl_zinb, lr_zinb)
+    print(zifa_full_hyperparams, kl_zifa_full, lr_zifa_full)
+
+
     datasets_mapper = {
         'pbmc': PbmcDataset,
         'cortex': CortexDataset,
@@ -165,6 +170,11 @@ if __name__ == '__main__':
         'corr_zinb_dataset': ZISyntheticDatasetCorr,
         'corr_zinb_dataset_strong': partial(ZISyntheticDatasetCorr, dropout_coef=0.95, lam_dropout=0.5),
         'corr_zinb_dataset_unif_0_6': partial(ZISyntheticDatasetCorr, dropout_coef=0.6, lam_dropout=0.),
+        'corr_zinb_dataset_unif_0_6_5': partial(ZISyntheticDatasetCorr, dropout_coef=0.65, lam_dropout=0.),
+        'corr_zinb_dataset_unif_0_7': partial(ZISyntheticDatasetCorr, dropout_coef=0.7, lam_dropout=0.),
+        'corr_zinb_dataset_zifa_0_9': partial(ZISyntheticDatasetCorr, dropout_coef=0.9, lam_dropout=0.5),
+        'corr_zinb_dataset_zifa_0_8': partial(ZISyntheticDatasetCorr, dropout_coef=0.8, lam_dropout=0.5),
+        'corr_zinb_dataset_zifa_0_7': partial(ZISyntheticDatasetCorr, dropout_coef=0.7, lam_dropout=0.5),
 
     }
 
@@ -173,7 +183,7 @@ if __name__ == '__main__':
 
     USE_BATCHES = use_batches 
     N_EXPERIMENTS = n_experiments
-    N_EPOCHS = 120
+    N_EPOCHS = 150
     N_LL_MC_SAMPLES = 100
     MY_METRICS = [
         LikelihoodMetric(tag='ll', trainer=None, n_mc_samples=N_LL_MC_SAMPLES),
