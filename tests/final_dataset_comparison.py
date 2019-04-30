@@ -12,9 +12,7 @@ from statsmodels.stats.weightstats import ttest_ind
 
 data_path = '/home/oscar/scVI/ppc/scripts/'
 
-dataset_names = ['corr_zinb_dataset_zifa_0_9', 'corr_zinb_dataset_zifa_0_8', 'corr_zinb_dataset_zifa_0_7',
-                 'corr_zinb_dataset_unif_0_7', 'corr_zinb_dataset_unif_0_6_5', 'corr_zinb_dataset_unif_0_6',
-                 'corr_zinb_dataset_strong']
+dataset_names = ['corr_zinb_dataset', 'corr_zifa_dataset', 'corr_nb_dataset']
 
 for dataset_name in dataset_names:
     data_files = sorted(glob.glob(os.path.join(data_path, '{}/*.csv'.format(dataset_name))))
