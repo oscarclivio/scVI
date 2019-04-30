@@ -1,6 +1,7 @@
 from scvi.inference.inference import UnsupervisedTrainer
 from scvi.dataset import CortexDataset, RetinaDataset, HematoDataset, PbmcDataset, \
     BrainSmallDataset, ZISyntheticDatasetCorr, SyntheticDatasetCorr
+from scvi.dataset import SyntheticDatasetCorr2, ZISyntheticDatasetCorrDistinct
 from scvi.models import VAE
 
 import copy
@@ -12,6 +13,7 @@ from statsmodels.stats.multitest import multipletests
 from metrics import *
 from zifa_full import VAE as VAE_zifa_full
 # from synthetic_data import NBDataset, ZINBDataset, Mixed25Dataset, Mixed50Dataset, Mixed75Dataset
+from functools import partial
 
 
 class ModelEval:
@@ -168,13 +170,8 @@ if __name__ == '__main__':
 
         'corr_nb_dataset': SyntheticDatasetCorr,
         'corr_zinb_dataset': ZISyntheticDatasetCorr,
-        'corr_zinb_dataset_strong': partial(ZISyntheticDatasetCorr, dropout_coef=0.95, lam_dropout=0.5),
-        'corr_zinb_dataset_unif_0_6': partial(ZISyntheticDatasetCorr, dropout_coef=0.6, lam_dropout=0.),
-        'corr_zinb_dataset_unif_0_6_5': partial(ZISyntheticDatasetCorr, dropout_coef=0.65, lam_dropout=0.),
-        'corr_zinb_dataset_unif_0_7': partial(ZISyntheticDatasetCorr, dropout_coef=0.7, lam_dropout=0.),
-        'corr_zinb_dataset_zifa_0_9': partial(ZISyntheticDatasetCorr, dropout_coef=0.9, lam_dropout=0.5),
-        'corr_zinb_dataset_zifa_0_8': partial(ZISyntheticDatasetCorr, dropout_coef=0.8, lam_dropout=0.5),
-        'corr_zinb_dataset_zifa_0_7': partial(ZISyntheticDatasetCorr, dropout_coef=0.7, lam_dropout=0.5),
+        'corr_zifa_dataset': partial(ZISyntheticDatasetCorr, dropout_coef_high=0.3, lam_dropout_high=0.5,
+                                         dropout_coef_low=0.6, lam_dropout_low=0.5)
 
     }
 
