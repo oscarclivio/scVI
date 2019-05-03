@@ -121,7 +121,10 @@ class Encoder(nn.Module):
     :param n_layers: The number of fully-connected hidden layers
     :param n_hidden: The number of nodes per hidden layer
     :dropout_rate: Dropout rate to apply to each of the hidden layers
-    :distribution: Distribution of the latent space: Normal or Logistic Normal
+    :distribution: Distribution of the latent space, one of
+    
+        * ``'normal'`` - Normal distribution
+        * ``'ln'`` - Logistic Normal distribution
     """
 
     def __init__(
@@ -132,7 +135,7 @@ class Encoder(nn.Module):
         n_layers: int = 1,
         n_hidden: int = 128,
         dropout_rate: float = 0.1,
-        distribution: str = "Normal",
+        distribution: str = "normal",
     ):
         super().__init__()
 
@@ -172,7 +175,7 @@ class Encoder(nn.Module):
         q_v = torch.exp(
             self.var_encoder(q)
         )  # (computational stability safeguard)torch.clamp(, -5, 5)
-        if self.distribution == "Logistic Normal":
+        if self.distribution == "ln":
             latent = self.reparameterize_logistic_normal(q_m, q_v)
         else:
             latent = self.reparameterize_normal(q_m, q_v)
