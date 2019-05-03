@@ -352,7 +352,7 @@ class LinearDecoderSCVI(nn.Module):
         # z_drop = self.drop_latent(z)
         px = self.px_decoder(z, *cat_list)
         px_scale = self.px_scale_decoder(px)
-        px_dropout = self.px_dropout_decoder(px)
+        px_dropout = self.px_dropout_decoder(z)
         px_rate = torch.exp(library) * px_scale
         px_r = None
         return px_scale, px_r, px_rate, px_dropout
