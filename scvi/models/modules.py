@@ -136,17 +136,23 @@ class Encoder(nn.Module):
         n_hidden: int = 128,
         dropout_rate: float = 0.1,
         distribution: str = "normal",
+        lstm: bool = True
     ):
         super().__init__()
 
-        self.encoder = FCLayers(
-            n_in=n_input,
-            n_out=n_hidden,
-            n_cat_list=n_cat_list,
-            n_layers=n_layers,
-            n_hidden=n_hidden,
-            dropout_rate=dropout_rate,
-        )
+        if lstm is True:
+            self.encoder = nn.Sequential(
+                nn.LSTM(n_input, n_hidden)
+            )    
+        else:
+            self.encoder = FCLayers(
+                n_in=n_input,
+                n_out=n_hidden,
+                n_cat_list=n_cat_list,
+                n_layers=n_layers,
+                n_hidden=n_hidden,
+                dropout_rate=dropout_rate,
+            )
         self.mean_encoder = nn.Linear(n_hidden, n_output)
         self.var_encoder = nn.Linear(n_hidden, n_output)
         self.distribution = distribution
