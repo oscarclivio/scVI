@@ -139,7 +139,7 @@ class Encoder(nn.Module):
         lstm: bool = True
     ):
         super().__init__()
-
+        self.lstm = lstm
         if lstm is True:
             self.encoder = nn.Sequential(
                 nn.LSTM(n_input, n_hidden)
@@ -176,7 +176,10 @@ class Encoder(nn.Module):
         """
 
         # Parameters for latent distribution
-        q = self.encoder(x, *cat_list)
+        if self.lstm is True:
+            q = self.encoder(x)
+        else:
+            q = self.encoder(x, *cat_list)
         q_m = self.mean_encoder(q)
         q_v = torch.exp(
             self.var_encoder(q)

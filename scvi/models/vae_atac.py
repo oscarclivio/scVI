@@ -64,7 +64,7 @@ class VAE_ATAC(nn.Module):
         log_variational: bool = False,
         reconstruction_loss: str = "lda",
         log_alpha_prior=None,
-        lstm = True
+        lstm=True
     ):
         super().__init__()
         self.dispersion = dispersion
