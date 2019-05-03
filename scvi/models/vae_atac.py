@@ -281,7 +281,7 @@ class VAE_ATAC(nn.Module):
             beta = torch.sigmoid(torch.log(beta))
             (px_scale, px_r, px_rate, px_dropout) = (None, None, None, None)
         elif self.reconstruction_loss == "lda":
-            alpha = self.decoder(z, batch_index, y)
+            alpha = self.decoder(self.dispersion, z, library, batch_index, y)
             alpha = F.softmax(alpha, dim=1)
             (px_scale, px_r, px_rate, px_dropout, beta) = (None, None, None, None, None)
         else:
