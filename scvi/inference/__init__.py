@@ -11,6 +11,7 @@ from .annotation import (
     ClassifierTrainer
 )
 from .fish import TrainerFish
+from .cite import CiteTrainer, CitePosterior
 
 __all__ = ['Trainer',
            'Posterior',
@@ -20,5 +21,7 @@ __all__ = ['Trainer',
            'JointSemiSupervisedTrainer',
            'SemiSupervisedTrainer',
            'AlternateSemiSupervisedTrainer',
-           'ClassifierTrainer'
+           'ClassifierTrainer',
+           'CiteTrainer',
+           'CitePosterior'
            ]

@@ -8,7 +8,7 @@ from .pbmc import PbmcDataset, PurifiedPBMCDataset
 from .hemato import HematoDataset
 from .loom import LoomDataset, RetinaDataset
 from .dataset10X import Dataset10X, BrainSmallDataset
-from .anndata import AnnDataset
+# from .anndata import AnnDataset
 from .csv import CsvDataset, BreastCancerDataset, MouseOBDataset
 from .seqfish import SeqfishDataset
 from .smfish import SmfishDataset
@@ -25,7 +25,7 @@ __all__ = ['SyntheticDataset',
            'CbmcDataset',
            'PbmcDataset',
            'LoomDataset',
-           'AnnDataset',
+        #    'AnnDataset',
            'CsvDataset',
            'Dataset10X',
            'SeqfishDataset',
