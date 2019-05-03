@@ -181,7 +181,7 @@ class Encoder(nn.Module):
         if self.lstm is True:
             h0 = Variable(torch.randn(1, x.shape[0], self.n_hidden))
             c0 = Variable(torch.randn(1, x.shape[0], self.n_hidden))
-            q, _ = self.encoder(x)
+            q, _ = self.encoder(x, (h0, c0))
         else:
             q = self.encoder(x, *cat_list)
         q_m = self.mean_encoder(q)
