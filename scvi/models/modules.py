@@ -6,6 +6,7 @@ from torch import nn as nn
 from torch.distributions import Normal
 
 from scvi.models.utils import one_hot
+from torch.autograd import Variable
 
 
 class FCLayers(nn.Module):
@@ -136,14 +137,14 @@ class Encoder(nn.Module):
         n_hidden: int = 128,
         dropout_rate: float = 0.1,
         distribution: str = "normal",
-        lstm: bool = True
+        lstm: bool = False
     ):
         super().__init__()
         self.lstm = lstm
         if lstm is True:
             self.encoder = nn.Sequential(
-                nn.LSTM(n_input, n_hidden)
-            )    
+                nn.LSTM(n_input, n_hidden, batch_first=True)
+            ) 
         else:
             self.encoder = FCLayers(
                 n_in=n_input,
@@ -177,7 +178,9 @@ class Encoder(nn.Module):
 
         # Parameters for latent distribution
         if self.lstm is True:
-            q = self.encoder(x)
+            h0 = Variable(torch.randn(1, x.shape[0], self.n_hidden))
+            c0 = Variable(torch.randn(1, x.shape[0], self.n_hidden))
+            q, _ = self.encoder(x)
         else:
             q = self.encoder(x, *cat_list)
         q_m = self.mean_encoder(q)
