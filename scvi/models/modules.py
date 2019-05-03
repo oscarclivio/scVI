@@ -141,6 +141,7 @@ class Encoder(nn.Module):
     ):
         super().__init__()
         self.lstm = lstm
+        self.n_hidden = n_hidden
         if lstm is True:
             self.encoder = nn.Sequential(
                 nn.LSTM(n_input, n_hidden, batch_first=True)
