@@ -110,7 +110,7 @@ class VAE_ATAC(nn.Module):
                 n_hidden=n_hidden,
                 dropout_rate=dropout_rate,
                 distribution="ln",
-                lstm=True
+                lstm=False
             )
         # l encoder goes from n_input-dimensional data to 1-d library size
         self.l_encoder = Encoder(
