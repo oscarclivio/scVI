@@ -9,5 +9,5 @@ __all__ = ['SCANVI',
            'VAE',
            'LDVAE',
            'VAEF',
-           'VAE_ATAC'
+           'VAE_ATAC',
            'Classifier']
