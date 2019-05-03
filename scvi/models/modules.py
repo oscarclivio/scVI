@@ -143,9 +143,8 @@ class Encoder(nn.Module):
         self.lstm = lstm
         self.n_hidden = n_hidden
         if lstm is True:
-            self.encoder = nn.Sequential(
-                nn.LSTM(n_input, n_hidden, batch_first=True)
-            ) 
+            self.encoder = nn.LSTM(n_input, n_hidden, batch_first=True)
+ 
         else:
             self.encoder = FCLayers(
                 n_in=n_input,
