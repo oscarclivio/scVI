@@ -137,7 +137,7 @@ class Encoder(nn.Module):
         n_hidden: int = 128,
         dropout_rate: float = 0.1,
         distribution: str = "normal",
-        lstm: bool = False
+        lstm: bool = True
     ):
         super().__init__()
         self.lstm = lstm
