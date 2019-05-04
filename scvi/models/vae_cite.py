@@ -379,6 +379,7 @@ class VAECITE(nn.Module):
             px_scale["adt"], px_r["adt"], px_rate["adt"], px_dropout[
                 "adt"
             ] = self.adt_decoder(self.adt_dispersion, z, ql_m["adt"], batch_index, y)
+            px_rate["adt"] += torch.exp(b)
             if self.adt_dispersion == "protein-label":
                 # px_r gets transposed - last dimension is nb genes
                 px_r["adt"] = F.linear(one_hot(y, self.n_labels), self.px_r_adt)
@@ -432,7 +433,6 @@ class VAECITE(nn.Module):
         px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, qb_m, qb_v, b = self.inference(
             x, batch_index, y
         )
-        px_rate["adt"] += torch.exp(b)
         reconst_loss_umi, reconst_loss_adt = self._reconstruction_loss(
             x, px_rate, px_r, px_dropout, px_scale
         )
