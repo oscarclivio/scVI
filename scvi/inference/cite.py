@@ -197,7 +197,7 @@ class CiteTrainer(UnsupervisedTrainer):
     default_metrics_to_monitor = ['ll_umi', 'll_adt']
 
     def __init__(self, model, gene_dataset, train_size=0.8, test_size=None, kl=None, **kwargs):
-        super(CiteTrainer, self).__init__(model, gene_dataset,
+        super().__init__(model, gene_dataset,
                                           train_size=0.8, test_size=None, kl=None, **kwargs)
         self.kl = kl
         if type(self) is CiteTrainer:
