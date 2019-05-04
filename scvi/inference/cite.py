@@ -140,6 +140,7 @@ class CitePosterior(Posterior):
         log_lkl /= n_samples
         return mse, mae, log_lkl
 
+    @torch.no_grad()
     def differential_expression_stats(self, M_sampling=100, mode='adt'):
         r"""
         Output average over statistics in a symmetric way (a against b)
