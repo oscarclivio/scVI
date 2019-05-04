@@ -378,7 +378,7 @@ class VAECITE(nn.Module):
         if self.reconstruction_loss_adt != "log_normal":
             px_scale["adt"], px_r["adt"], px_rate["adt"], px_dropout[
                 "adt"
-            ] = self.adt_decoder(self.adt_dispersion, z, library_adt, batch_index, y)
+            ] = self.adt_decoder(self.adt_dispersion, z, ql_m["adt"], batch_index, y)
             if self.adt_dispersion == "protein-label":
                 # px_r gets transposed - last dimension is nb genes
                 px_r["adt"] = F.linear(one_hot(y, self.n_labels), self.px_r_adt)
