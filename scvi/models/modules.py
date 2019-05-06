@@ -149,7 +149,14 @@ class Encoder(nn.Module):
         )
         self.mean_encoder = nn.Linear(n_hidden, n_output)
         self.var_encoder = nn.Linear(n_hidden, n_output)
-        self.transformation = nn.Linear(n_output,  n_output)
+        self.transformation = nn.Sequential(
+            nn.Linear(n_output, n_output),
+            nn.BatchNorm1d(n_output),
+            nn.ReLU(),
+            nn.Dropout(p=dropout_rate),
+            nn.Linear(n_output, n_output),
+            nn.Softmax(dim=-1),
+        )
         self.distribution = distribution
 
     def reparameterize_normal(self, mu, var):
@@ -157,7 +164,7 @@ class Encoder(nn.Module):
 
     def reparameterize_logistic_normal(self, mu, var):
         epsilon = Normal(torch.zeros_like(mu), torch.ones_like(var)).rsample()
-        z = torch.softmax(self.transformation(mu + torch.sqrt(var) * epsilon), dim=-1)
+        z = self.transformation(mu + torch.sqrt(var) * epsilon)
         return z
 
     def forward(self, x: torch.Tensor, *cat_list: int):
