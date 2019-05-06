@@ -385,7 +385,7 @@ class LinearDecoderChromVAE(nn.Module):
             n_hidden=n_output,
             dropout_rate=0,
             use_relu=False,
-            bias=False,
+            bias=True,
         )
         # mean gamma
         self.beta_decoder = FCLayers(
@@ -396,7 +396,7 @@ class LinearDecoderChromVAE(nn.Module):
             n_hidden=n_output,
             dropout_rate=0,
             use_relu=False,
-            bias=False,
+            bias=True,
         )
 
     def forward(self, z: torch.Tensor, *cat_list: int):
