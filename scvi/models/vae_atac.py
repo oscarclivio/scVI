@@ -11,6 +11,7 @@ from scvi.models.log_likelihood import (
     log_nb_positive,
     log_beta_bernoulli,
     log_zero_inflated_bernoulli,
+    log_dirichlet_multinomial,
 )
 from scvi.models.modules import Encoder, DecoderSCVI, Decoder, LinearDecoderChromVAE
 from scvi.models.utils import one_hot
@@ -188,9 +189,10 @@ class VAE_ATAC(nn.Module):
         elif self.reconstruction_loss == 'multinomial':
             # reconst_loss = -Multinomial(probs=torch.t(alpha)).log_prob(x)
             reconst_loss = -Multinomial(probs=alpha).log_prob(x)
-        else:
+        elif self.reconstruction_loss == 'zi_multinomial':
             reconst_loss = -Multinomial(probs=alpha*(beta > 0.5).float()).log_prob(x)
-
+        else: # dir-mult
+            reconst_loss = -log_dirichlet_multinomial(x, alpha)
         return reconst_loss
 
     def scale_from_z(self, sample_batch, fixed_batch):
@@ -233,10 +235,15 @@ class VAE_ATAC(nn.Module):
             alpha, beta = self.decoder(z, batch_index, y)
             alpha = torch.softmax(alpha, dim=-1)
             beta = None
-        else:
+        elif self.reconstruction_loss == "zi_multinomial":
             alpha, beta = self.decoder(z, batch_index, y)
             alpha = torch.softmax(alpha, dim=-1)
             beta = torch.sigmoid(beta)
+        # dir-mult
+        else:
+            alpha, beta = self.decoder(z, batch_index, y)
+            alpha = torch.exp(alpha, dim=-1)
+            beta = None
 
         return (qz_m, qz_v, z, ql_m, ql_v, library, alpha, beta)
 
