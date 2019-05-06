@@ -228,7 +228,7 @@ class VAE_ATAC(nn.Module):
             alpha = torch.sigmoid(alpha)
             beta = torch.sigmoid(beta)
         elif self.reconstruction_loss == "multinomial":
-            alpha, beta = self.decoder(self.dispersion, z, library, batch_index, y)
+            alpha, beta = self.decoder(z, batch_index, y)
             alpha = torch.softmax(alpha, dim=-1)
             beta = None
 
