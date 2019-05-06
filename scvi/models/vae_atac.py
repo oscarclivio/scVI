@@ -46,6 +46,8 @@ class VAE_ATAC(nn.Module):
         * ``'bernoulli'`` - Bernoulli distribution
         * ``'zero_inflated_bernoulli'`` - ZI Bernoulli distribution
         * ``'beta-bernoulli'`` - Beta-Bernoulli distribution
+        * ``'zi_multinomial'`` - ZI Multinomial
+        * ``'dir-mult'`` - Dirichlet-Multinomial
 
     Examples:
         >>> gene_dataset = CortexDataset()
@@ -242,7 +244,7 @@ class VAE_ATAC(nn.Module):
         # dir-mult
         else:
             alpha, beta = self.decoder(z, batch_index, y)
-            alpha = torch.exp(alpha, dim=-1)
+            alpha = torch.exp(alpha)
             beta = None
 
         return (qz_m, qz_v, z, ql_m, ql_v, library, alpha, beta)
