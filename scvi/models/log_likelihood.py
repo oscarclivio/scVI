@@ -161,9 +161,11 @@ def log_dirichlet_multinomial(x, alpha, eps=1e-8):
     sum_alpha = torch.sum(alpha, dim=-1)
     n = torch.sum(x, dim=-1)
     ll = (
-        torch.lgamma(sum_alpha)
+        torch.lgamma(n + 1)
+        + torch.lgamma(sum_alpha)
         - torch.lgamma(n + sum_alpha)
         + torch.sum(torch.lgamma(x + alpha), dim=-1)
+        - torch.sum(torch.lgamma(x + 1), dim=-1)
         - torch.sum(torch.lgamma(alpha), dim=-1)
     )
 
