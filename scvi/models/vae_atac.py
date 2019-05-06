@@ -189,8 +189,7 @@ class VAE_ATAC(nn.Module):
             # reconst_loss = -Multinomial(probs=torch.t(alpha)).log_prob(x)
             reconst_loss = -Multinomial(probs=alpha).log_prob(x)
         else:
-            reconst_loss = -Multinomial(probs=alpha*(beta > 0.5)).log_prob(x)
-
+            reconst_loss = -Multinomial(probs=alpha*(beta > 0.5).float()).log_prob(x)
 
         return reconst_loss
 
