@@ -66,7 +66,7 @@ class VAE_ATAC(nn.Module):
         log_variational: bool = False,
         reconstruction_loss: str = "multinomial",
         log_alpha_prior=None,
-        lstm=True
+        lstm=False,
     ):
         super().__init__()
         self.dispersion = dispersion
@@ -103,7 +103,7 @@ class VAE_ATAC(nn.Module):
             n_hidden=n_hidden,
             dropout_rate=dropout_rate,
             distribution="ln",
-            lstm=False
+            lstm=lstm,
         )
         # l encoder goes from n_input-dimensional data to 1-d library size
         self.l_encoder = Encoder(
@@ -182,7 +182,9 @@ class VAE_ATAC(nn.Module):
         if self.reconstruction_loss == "beta-bernoulli":
             reconst_loss = -log_beta_bernoulli(x, alpha, beta)
         elif self.reconstruction_loss == "bernoulli":
-            reconst_loss = -torch.sum(torch.log(x * alpha + (1 - x) * (1 - alpha)), dim=1)
+            reconst_loss = -torch.sum(
+                torch.log(x * alpha + (1 - x) * (1 - alpha)), dim=1
+            )
         elif self.reconstruction_loss == "zero_inflated_bernoulli":
             reconst_loss = -log_zero_inflated_bernoulli(x, alpha, beta)
         else:
@@ -232,16 +234,7 @@ class VAE_ATAC(nn.Module):
             alpha = torch.softmax(alpha, dim=-1)
             beta = None
 
-        return (
-            qz_m,
-            qz_v,
-            z,
-            ql_m,
-            ql_v,
-            library,
-            alpha,
-            beta,
-        )
+        return (qz_m, qz_v, z, ql_m, ql_v, library, alpha, beta)
 
     def forward(self, x, local_l_mean, local_l_var, batch_index=None, y=None):
         r""" Returns the reconstruction loss and the Kullback divergences
@@ -280,8 +273,6 @@ class VAE_ATAC(nn.Module):
 
         kl_divergence = kl_divergence_z
 
-        reconst_loss = self._reconstruction_loss(
-            x, alpha, beta
-        )
+        reconst_loss = self._reconstruction_loss(x, alpha, beta)
 
         return reconst_loss, kl_divergence
