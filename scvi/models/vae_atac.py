@@ -66,7 +66,6 @@ class VAE_ATAC(nn.Module):
         log_variational: bool = False,
         reconstruction_loss: str = "multinomial",
         log_alpha_prior=None,
-        lstm=False,
     ):
         super().__init__()
         self.dispersion = dispersion
@@ -103,7 +102,6 @@ class VAE_ATAC(nn.Module):
             n_hidden=n_hidden,
             dropout_rate=dropout_rate,
             distribution="ln",
-            lstm=lstm,
         )
         # l encoder goes from n_input-dimensional data to 1-d library size
         self.l_encoder = Encoder(
