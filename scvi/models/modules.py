@@ -6,7 +6,6 @@ from torch import nn as nn
 from torch.distributions import Normal
 
 from scvi.models.utils import one_hot
-from torch.autograd import Variable
 
 
 class FCLayers(nn.Module):
@@ -137,23 +136,17 @@ class Encoder(nn.Module):
         n_hidden: int = 128,
         dropout_rate: float = 0.1,
         distribution: str = "normal",
-        lstm: bool = False
     ):
         super().__init__()
-        self.lstm = lstm
-        self.n_hidden = n_hidden
-        if lstm is True:
-            self.encoder = nn.LSTM(n_input, n_hidden, batch_first=True)
- 
-        else:
-            self.encoder = FCLayers(
-                n_in=n_input,
-                n_out=n_hidden,
-                n_cat_list=n_cat_list,
-                n_layers=n_layers,
-                n_hidden=n_hidden,
-                dropout_rate=dropout_rate,
-            )
+
+        self.encoder = FCLayers(
+            n_in=n_input,
+            n_out=n_hidden,
+            n_cat_list=n_cat_list,
+            n_layers=n_layers,
+            n_hidden=n_hidden,
+            dropout_rate=dropout_rate,
+        )
         self.mean_encoder = nn.Linear(n_hidden, n_output)
         self.var_encoder = nn.Linear(n_hidden, n_output)
         self.distribution = distribution
@@ -177,12 +170,7 @@ class Encoder(nn.Module):
         """
 
         # Parameters for latent distribution
-        if self.lstm is True:
-            h0 = Variable(torch.randn(1, x.shape[0], self.n_hidden))
-            c0 = Variable(torch.randn(1, x.shape[0], self.n_hidden))
-            q, _ = self.encoder(x, (h0, c0))
-        else:
-            q = self.encoder(x, *cat_list)
+        q = self.encoder(x, *cat_list)
         q_m = self.mean_encoder(q)
         q_v = torch.exp(
             self.var_encoder(q)
@@ -368,6 +356,67 @@ class LinearDecoderSCVI(nn.Module):
         px_rate = torch.exp(library) * px_scale
         px_r = None
         return px_scale, px_r, px_rate, px_dropout
+
+
+class LinearDecoderChromVAE(nn.Module):
+    r"""Decodes data from latent space of ``n_input`` dimensions ``n_output``
+    dimensions using a linear decoder
+
+    :param n_input: The dimensionality of the input (latent space)
+    :param n_output: The dimensionality of the output (data space)
+    :param n_cat_list: A list containing the number of categories
+                       for each category of interest. Each category will be
+                       included using a one-hot encoding
+    """
+
+    def __init__(
+        self,
+        n_input: int,
+        n_output: int,
+        n_cat_list: Iterable[int] = None,
+        n_layers: int = 1,
+    ):
+        super().__init__()
+        self.alpha_decoder = FCLayers(
+            n_in=n_input,
+            n_out=n_output,
+            n_cat_list=n_cat_list,
+            n_layers=1,
+            n_hidden=n_output,
+            dropout_rate=0,
+            use_relu=False,
+            bias=False,
+        )
+        # mean gamma
+        self.beta_decoder = FCLayers(
+            n_in=n_input,
+            n_out=n_output,
+            n_cat_list=n_cat_list,
+            n_layers=1,
+            n_hidden=n_output,
+            dropout_rate=0,
+            use_relu=False,
+            bias=False,
+        )
+
+    def forward(self, z: torch.Tensor, *cat_list: int):
+        r"""The forward computation for a single sample.
+
+         #. Decodes the data from the latent space using the decoder network
+         #. Returns parameters for the ZINB distribution of expression
+
+        :param z: tensor with shape ``(n_input,)``
+        :param library: library size
+        :param cat_list: list of category membership(s) for this sample
+        :return: parameters for the ZINB distribution of expression
+        :rtype: 4-tuple of :py:class:`torch.Tensor`
+        """
+
+        # The decoder returns values for the parameters of the ZINB distribution
+        # z_drop = self.drop_latent(z)
+        alpha = self.alpha_decoder(z, *cat_list)
+        beta = self.beta_decoder(z, *cat_list)
+        return alpha, beta
 
 
 # Decoder
