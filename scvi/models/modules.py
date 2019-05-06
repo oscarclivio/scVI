@@ -152,9 +152,6 @@ class Encoder(nn.Module):
         self.transformation = nn.Sequential(
             nn.Linear(n_output, n_output),
             nn.BatchNorm1d(n_output),
-            nn.ReLU(),
-            nn.Dropout(p=dropout_rate),
-            nn.Linear(n_output, n_output),
             nn.Softmax(dim=-1),
         )
         self.distribution = distribution
