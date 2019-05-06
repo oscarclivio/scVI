@@ -49,6 +49,12 @@ class VAE_ATAC(nn.Module):
         * ``'zi_multinomial'`` - ZI Multinomial
         * ``'dir-mult'`` - Dirichlet-Multinomial
 
+    :param distribution: One of
+
+        * ``'normal'`` - Normal distribution
+        * ``'ln'`` - Logistic Normal distribution
+        * ``'simplex'`` - NN transformation of normal to simplex
+
     Examples:
         >>> gene_dataset = CortexDataset()
         >>> vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * False,
@@ -69,6 +75,7 @@ class VAE_ATAC(nn.Module):
         log_variational: bool = False,
         reconstruction_loss: str = "multinomial",
         log_alpha_prior=None,
+        distribution: str = "ln"
     ):
         super().__init__()
         self.dispersion = dispersion
@@ -79,6 +86,7 @@ class VAE_ATAC(nn.Module):
         self.n_batch = n_batch
         self.n_labels = n_labels
         self.n_latent_layers = 1  # not sure what this is for, no usages?
+        self.distribution = distribution
 
         if log_alpha_prior is None:
             self.l_alpha_prior = torch.nn.Parameter(torch.randn(1))
@@ -104,7 +112,7 @@ class VAE_ATAC(nn.Module):
             n_layers=n_layers,
             n_hidden=n_hidden,
             dropout_rate=dropout_rate,
-            distribution="ln",
+            distribution=distribution,
         )
         # l encoder goes from n_input-dimensional data to 1-d library size
         self.l_encoder = Encoder(

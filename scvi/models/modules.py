@@ -164,6 +164,11 @@ class Encoder(nn.Module):
 
     def reparameterize_logistic_normal(self, mu, var):
         epsilon = Normal(torch.zeros_like(mu), torch.ones_like(var)).rsample()
+        z = torch.softmax(mu + torch.sqrt(var) * epsilon, dim=-1)
+        return z
+
+    def reparameterize_simplex(self, mu, var):
+        epsilon = Normal(torch.zeros_like(mu), torch.ones_like(var)).rsample()
         z = self.transformation(mu + torch.sqrt(var) * epsilon)
         return z
 
@@ -186,8 +191,10 @@ class Encoder(nn.Module):
         )  # (computational stability safeguard)torch.clamp(, -5, 5)
         if self.distribution == "ln":
             latent = self.reparameterize_logistic_normal(q_m, q_v)
-        else:
+        elif self.distribution == "normal":
             latent = self.reparameterize_normal(q_m, q_v)
+        else:
+            latent = self.reparameterize_simplex(q_m, q_v)
         return q_m, q_v, latent
 
 
