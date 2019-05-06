@@ -149,7 +149,7 @@ class Encoder(nn.Module):
         )
         self.mean_encoder = nn.Linear(n_hidden, n_output)
         self.var_encoder = nn.Linear(n_hidden, n_output)
-        self.transformation = nn.Linear(n_hidden,  n_hidden)
+        self.transformation = nn.Linear(n_output,  n_output)
         self.distribution = distribution
 
     def reparameterize_normal(self, mu, var):
