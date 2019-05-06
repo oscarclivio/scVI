@@ -77,9 +77,9 @@ class VAE_ATAC(nn.Module):
         self.n_labels = n_labels
         self.n_latent_layers = 1  # not sure what this is for, no usages?
 
-        if log_alpha_prior is None and reconstruction_loss == "lda":
+        if log_alpha_prior is None:
             self.l_alpha_prior = torch.nn.Parameter(torch.randn(1))
-        elif type(log_alpha_prior) is not str and reconstruction_loss == "lda":
+        elif type(log_alpha_prior) is not str:
             self.l_alpha_prior = torch.tensor(log_alpha_prior)
         else:
             self.l_alpha_prior = None
