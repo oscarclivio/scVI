@@ -239,7 +239,7 @@ class VAE_ATAC(nn.Module):
         elif self.reconstruction_loss in ["bernoulli", "zero_inflated_bernoulli"]:
             # beta is dropout
             alpha, beta = self.decoder(z, batch_index, y)
-            alpha = torch.sigmoid(alpha)
+            alpha = torch.softmax(alpha, dim=-1)
             beta = torch.sigmoid(beta)
         elif self.reconstruction_loss == "multinomial":
             alpha, beta = self.decoder(z, batch_index, y)
