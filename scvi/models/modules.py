@@ -42,26 +42,17 @@ class FCLayers(nn.Module):
         else:
             self.n_cat_list = []
 
-        self.fc_layers = nn.Sequential(
-            collections.OrderedDict(
-                [
-                    (
-                        "Layer {}".format(i),
-                        nn.Sequential(
-                            nn.Linear(n_in + sum(self.n_cat_list), n_out, bias=bias),
-                            nn.BatchNorm1d(n_out, momentum=0.01, eps=0.001)
-                            if use_batch_norm
-                            else None,
-                            nn.ReLU() if use_relu else None,
-                            nn.Dropout(p=dropout_rate) if dropout_rate > 0 else None,
-                        ),
-                    )
-                    for i, (n_in, n_out) in enumerate(
-                        zip(layers_dim[:-1], layers_dim[1:])
-                    )
-                ]
-            )
-        )
+        self.fc_layers = nn.Sequential(collections.OrderedDict(
+            [('Layer {}'.format(i), nn.Sequential(
+                nn.Linear(n_in + sum(self.n_cat_list), n_out),
+                # Below, 0.01 and 0.001 are the default values for `momentum` and `eps` from
+                # the tensorflow implementation of batch norm; we're using those settings
+                # here too so that the results match our old tensorflow code. The default
+                # setting from pytorch would probably be fine too but we haven't tested that.
+                nn.BatchNorm1d(n_out, momentum=.01, eps=0.001) if use_batch_norm else None,
+                nn.ReLU() if use_relu else None,
+                nn.Dropout(p=dropout_rate) if dropout_rate > 0 else None))
+             for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:]))]))
 
     def forward(self, x: torch.Tensor, *cat_list: int):
         r"""Forward computation on ``x``.
