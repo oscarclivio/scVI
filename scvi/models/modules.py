@@ -150,13 +150,19 @@ class Encoder(nn.Module):
         self.mean_encoder = nn.Linear(n_hidden, n_output)
         self.var_encoder = nn.Linear(n_hidden, n_output)
         self.distribution = distribution
+        if distribution == "gsm":
+            self.transformation = nn.Sequential(nn.Linear(n_output, n_output),
+                                                nn.Softmax(dim=-1))
+        if distribution == "ln":
+            self.transformation = nn.Softmax(dim=-1)
 
     def reparameterize_normal(self, mu, var):
         return Normal(mu, var.sqrt()).rsample()
 
-    def reparameterize_logistic_normal(self, mu, var):
+    def reparameterize_transformation(self, mu, var):
         epsilon = Normal(torch.zeros_like(mu), torch.ones_like(var)).rsample()
-        return torch.softmax(mu + torch.sqrt(var) * epsilon, dim=1)
+        z = self.transformation(mu + torch.sqrt(var) * epsilon)
+        return z
 
     def forward(self, x: torch.Tensor, *cat_list: int):
         r"""The forward computation for a single sample.
@@ -175,10 +181,10 @@ class Encoder(nn.Module):
         q_v = torch.exp(
             self.var_encoder(q)
         )  # (computational stability safeguard)torch.clamp(, -5, 5)
-        if self.distribution == "ln":
-            latent = self.reparameterize_logistic_normal(q_m, q_v)
-        else:
+        if self.distribution == "normal":
             latent = self.reparameterize_normal(q_m, q_v)
+        else:
+            latent = self.reparameterize_transformation(q_m, q_v)
         return q_m, q_v, latent
 
 
