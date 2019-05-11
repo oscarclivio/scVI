@@ -334,7 +334,7 @@ class VAECITE(nn.Module):
             qz_m = qz_m.unsqueeze(0).expand((n_samples, qz_m.size(0), qz_m.size(1)))
             qz_v = qz_v.unsqueeze(0).expand((n_samples, qz_v.size(0), qz_v.size(1)))
             z = Normal(qz_m, qz_v.sqrt()).sample()
-            z = torch.softmax(z, dim=-1)
+            z = self.z_encoder.transformation(z)
             ql_m["umi"] = (
                 ql_m["umi"]
                 .unsqueeze(0)
