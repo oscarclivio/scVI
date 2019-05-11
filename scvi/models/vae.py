@@ -42,6 +42,11 @@ class VAE(nn.Module):
         * ``'normal'`` - Normal distribution
         * ``'ln'`` - Logistic Normal distribution
 
+    :param log_alpha: Used only when latent_distribution == 'ln'. One of
+
+        * ``'None'`` - Prior optimized in an Empirical Bayes fashion
+        * ``'float'`` - Value > 0 to be translated from dirichlet to ln
+
     Examples:
         >>> gene_dataset = CortexDataset()
         >>> vae = VAE(gene_dataset.nb_genes, n_batch=gene_dataset.n_batches * False,
@@ -117,6 +122,8 @@ class VAE(nn.Module):
         qz_m, qz_v, z = self.z_encoder(x, y)  # y only used in VAEC
         if give_mean:
             z = qz_m
+            if self.latent_distribution != 'normal':
+                z = self.z_encoder.transformation(z)
         return z
 
     def sample_from_posterior_l(self, x):
@@ -187,8 +194,8 @@ class VAE(nn.Module):
             qz_m = qz_m.unsqueeze(0).expand((n_samples, qz_m.size(0), qz_m.size(1)))
             qz_v = qz_v.unsqueeze(0).expand((n_samples, qz_v.size(0), qz_v.size(1)))
             z = Normal(qz_m, qz_v.sqrt()).sample()
-            if self.latent_distribution == 'ln':
-                z = torch.softmax(z, dim=-1)
+            if self.latent_distribution != 'normal':
+                z = self.z_encoder.transformation(z)
             ql_m = ql_m.unsqueeze(0).expand((n_samples, ql_m.size(0), ql_m.size(1)))
             ql_v = ql_v.unsqueeze(0).expand((n_samples, ql_v.size(0), ql_v.size(1)))
             library = Normal(ql_m, ql_v.sqrt()).sample()

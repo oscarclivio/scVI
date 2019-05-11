@@ -42,26 +42,17 @@ class FCLayers(nn.Module):
         else:
             self.n_cat_list = []
 
-        self.fc_layers = nn.Sequential(
-            collections.OrderedDict(
-                [
-                    (
-                        "Layer {}".format(i),
-                        nn.Sequential(
-                            nn.Linear(n_in + sum(self.n_cat_list), n_out, bias=bias),
-                            nn.BatchNorm1d(n_out, momentum=0.01, eps=0.001)
-                            if use_batch_norm
-                            else None,
-                            nn.ReLU() if use_relu else None,
-                            nn.Dropout(p=dropout_rate) if dropout_rate > 0 else None,
-                        ),
-                    )
-                    for i, (n_in, n_out) in enumerate(
-                        zip(layers_dim[:-1], layers_dim[1:])
-                    )
-                ]
-            )
-        )
+        self.fc_layers = nn.Sequential(collections.OrderedDict(
+            [('Layer {}'.format(i), nn.Sequential(
+                nn.Linear(n_in + sum(self.n_cat_list), n_out),
+                # Below, 0.01 and 0.001 are the default values for `momentum` and `eps` from
+                # the tensorflow implementation of batch norm; we're using those settings
+                # here too so that the results match our old tensorflow code. The default
+                # setting from pytorch would probably be fine too but we haven't tested that.
+                nn.BatchNorm1d(n_out, momentum=.01, eps=0.001) if use_batch_norm else None,
+                nn.ReLU() if use_relu else None,
+                nn.Dropout(p=dropout_rate) if dropout_rate > 0 else None))
+             for i, (n_in, n_out) in enumerate(zip(layers_dim[:-1], layers_dim[1:]))]))
 
     def forward(self, x: torch.Tensor, *cat_list: int):
         r"""Forward computation on ``x``.
@@ -150,13 +141,19 @@ class Encoder(nn.Module):
         self.mean_encoder = nn.Linear(n_hidden, n_output)
         self.var_encoder = nn.Linear(n_hidden, n_output)
         self.distribution = distribution
+        if distribution == "gsm":
+            self.transformation = nn.Sequential(nn.Linear(n_output, n_output),
+                                                nn.Softmax(dim=-1))
+        if distribution == "ln":
+            self.transformation = nn.Softmax(dim=-1)
 
     def reparameterize_normal(self, mu, var):
         return Normal(mu, var.sqrt()).rsample()
 
-    def reparameterize_logistic_normal(self, mu, var):
+    def reparameterize_transformation(self, mu, var):
         epsilon = Normal(torch.zeros_like(mu), torch.ones_like(var)).rsample()
-        return torch.softmax(mu + torch.sqrt(var) * epsilon, dim=1)
+        z = self.transformation(mu + torch.sqrt(var) * epsilon)
+        return z
 
     def forward(self, x: torch.Tensor, *cat_list: int):
         r"""The forward computation for a single sample.
@@ -175,10 +172,10 @@ class Encoder(nn.Module):
         q_v = torch.exp(
             self.var_encoder(q)
         )  # (computational stability safeguard)torch.clamp(, -5, 5)
-        if self.distribution == "ln":
-            latent = self.reparameterize_logistic_normal(q_m, q_v)
-        else:
+        if self.distribution == "normal":
             latent = self.reparameterize_normal(q_m, q_v)
+        else:
+            latent = self.reparameterize_transformation(q_m, q_v)
         return q_m, q_v, latent
 
 

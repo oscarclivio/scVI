@@ -26,7 +26,7 @@ Single-cell Variational Inference
 Quick Start
 -----------
 
-1. Install Python 3.6 or later. We typically use the Miniconda_ Python distribution.
+1. Install Python 3.7. We typically use the Miniconda_ Python distribution.
 
 .. _Miniconda: https://conda.io/miniconda.html
 
@@ -34,25 +34,25 @@ Quick Start
 
 .. _PyTorch: http://pytorch.org
 
-3. Install scVI through pip (``pip install scvi``). We also support conda (``conda install scvi -c bioconda`` ) but due to some packaging issues of pytorch, it will force pytorch 0.4.1. Alternatively, you may download or clone this repository and run ``python setup.py install``.
+3. We recommend installing scVI through conda:
+
+    ``conda install scvi -c bioconda -c conda-forge``
+
+   Alternatively, you may use pip (``pip install scvi``), or clone this repository and run ``python setup.py install``.
 
 4. Follow along with our Jupyter notebooks to quickly get familiar with scVI!
 
    a. Getting started:
-   
-   * `data loading`__
-   * `basic usage`__ 
-   
+       * `data loading`__
+       * `basic usage`__    
    b. Analyzing several datasets:
-   
-   * `harmonization`__ 
-   * `annotation`__ 
-   
+       * `harmonization`__ 
+       * `annotation`__ 
    c. Advanced topics:
+       * `interaction with scanpy`__ 
+       * `linear decoder for gene interpretation`__
+       * `reproducing results from the scVI paper`__ 
    
-   * `interaction with scanpy`__ 
-   * `linear decoder for gene interpretation`__
-   * `reproducing results from the scVI paper`__ 
 
 
 .. __: https://github.com/YosefLab/scVI/tree/master/tests/notebooks/data_loading.ipynb
