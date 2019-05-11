@@ -82,6 +82,7 @@ class VAECITE(nn.Module):
         b_mean=None,
         b_var=None,
         log_alpha_prior=None,
+        model_background=False,
     ):
         super().__init__()
         self.umi_dispersion = umi_dispersion
@@ -99,6 +100,7 @@ class VAECITE(nn.Module):
         self.adt_dispersion = adt_dispersion
         self.b_mean = b_mean
         self.b_var = b_var
+        self.model_background = model_background
 
         if log_alpha_prior is None:
             self.l_alpha_prior = torch.nn.Parameter(torch.randn(1))
@@ -379,7 +381,8 @@ class VAECITE(nn.Module):
             px_scale["adt"], px_r["adt"], px_rate["adt"], px_dropout[
                 "adt"
             ] = self.adt_decoder(self.adt_dispersion, z, ql_m["adt"], batch_index, y)
-            px_rate["adt"] += torch.exp(b)
+            if self.model_background is True:
+                px_rate["adt"] += torch.exp(b)
             if self.adt_dispersion == "protein-label":
                 # px_r gets transposed - last dimension is nb genes
                 px_r["adt"] = F.linear(one_hot(y, self.n_labels), self.px_r_adt)
@@ -456,20 +459,28 @@ class VAECITE(nn.Module):
             Normal(ql_m["umi"], torch.sqrt(ql_v["umi"])),
             Normal(local_l_mean_umi, torch.sqrt(local_l_var_umi)),
         ).sum(dim=1)
-        local_l_mean_adt = self.adt_mean_lib * torch.ones_like(ql_m["adt"])
-        local_l_var_adt = self.adt_var_lib * torch.ones_like(ql_v["adt"])
-        # kl_divergence_l_adt = kl(Normal(ql_m['adt'], torch.sqrt(ql_v['adt'])), Normal(
-        # local_l_mean_adt, torch.sqrt(local_l_var_adt))).sum(dim=1)
-        local_b_mean_adt = self.b_mean * torch.ones_like(qb_m)
-        local_b_var_adt = self.b_var * torch.ones_like(qb_v)
-        kl_divergence_b = kl(
-            Normal(qb_m, torch.sqrt(qb_v)),
-            Normal(local_b_mean_adt, torch.sqrt(local_b_var_adt)),
-        ).sum(dim=1)
+
+        if self.model_background is True:
+            local_b_mean_adt = self.b_mean * torch.ones_like(qb_m)
+            local_b_var_adt = self.b_var * torch.ones_like(qb_v)
+            kl_divergence_b = kl(
+                Normal(qb_m, torch.sqrt(qb_v)),
+                Normal(local_b_mean_adt, torch.sqrt(local_b_var_adt)),
+            ).sum(dim=1)
+            kl_divergence_l_adt = 0
+        else:
+            local_l_mean_adt = self.adt_mean_lib * torch.ones_like(ql_m["adt"])
+            local_l_var_adt = self.adt_var_lib * torch.ones_like(ql_v["adt"])
+            kl_divergence_l_adt = kl(
+                Normal(ql_m["adt"], torch.sqrt(ql_v["adt"])),
+                Normal(local_l_mean_adt, torch.sqrt(local_l_var_adt)),
+            ).sum(dim=1)
+            kl_divergence_b = 0
+
         kl_divergence = kl_divergence_z
         return (
             reconst_loss_umi + kl_divergence_l_umi,
-            reconst_loss_adt + kl_divergence_b,
+            reconst_loss_adt + kl_divergence_b + kl_divergence_l_adt,
             kl_divergence,
         )
-
+        
