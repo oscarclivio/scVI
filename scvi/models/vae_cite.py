@@ -476,8 +476,8 @@ class VAECITE(nn.Module):
             ).sum(dim=1)
             kl_divergence_l_adt = 0
         else:
-            local_l_mean_adt = self.adt_mean_lib * torch.ones_like(ql_m["adt"])
-            local_l_var_adt = self.adt_var_lib * torch.ones_like(ql_v["adt"])
+            local_l_mean_adt = self.adt_mean_lib 
+            local_l_var_adt = self.adt_var_lib 
             kl_divergence_l_adt = kl(
                 Normal(ql_m["adt"], torch.sqrt(ql_v["adt"])),
                 Normal(local_l_mean_adt, torch.sqrt(local_l_var_adt)),
