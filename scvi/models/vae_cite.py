@@ -83,6 +83,8 @@ class VAECITE(nn.Module):
         b_var=None,
         log_alpha_prior=None,
         model_background=False,
+        linear_decoder=False,
+        latent_distribution="ln"
     ):
         super().__init__()
         self.umi_dispersion = umi_dispersion
@@ -101,6 +103,7 @@ class VAECITE(nn.Module):
         self.b_mean = b_mean
         self.b_var = b_var
         self.model_background = model_background
+        self.latent_distribution = latent_distribution
 
         if log_alpha_prior is None:
             self.l_alpha_prior = torch.nn.Parameter(torch.randn(1))
@@ -140,7 +143,7 @@ class VAECITE(nn.Module):
             n_layers=n_layers,
             n_hidden=n_hidden_umi,
             dropout_rate=dropout_rate,
-            distribution="ln",
+            distribution=latent_distribution,
         )
         self.l_umi_encoder = Encoder(
             n_input_genes,
@@ -163,10 +166,14 @@ class VAECITE(nn.Module):
             n_layers=n_layers,
             dropout_rate=dropout_rate,
         )
-        self.umi_decoder = LinearDecoderSCVI(
-            n_latent, n_input_genes, n_cat_list=[n_batch], n_layers=n_layers
-        )
-
+        if linear_decoder is True:
+            self.umi_decoder = LinearDecoderSCVI(
+                n_latent, n_input_genes, n_cat_list=[n_batch], n_layers=n_layers
+            )
+        else:
+            self.umi_decoder = DecoderSCVI(
+                n_latent, n_input_genes, n_cat_list=[n_batch], n_layers=n_layers, n_hidden=n_hidden_umi
+            ) 
         if self.reconstruction_loss_adt == "log_normal":
             self.adt_decoder = Decoder(
                 n_latent,
@@ -176,10 +183,14 @@ class VAECITE(nn.Module):
                 n_cat_list=[n_batch],
             )
         else:
-            self.adt_decoder = LinearDecoderSCVI(
-                n_latent, self.n_input_proteins, n_layers=n_layers, n_cat_list=[n_batch]
-            )
-
+            if linear_decoder is True:
+                self.adt_decoder = LinearDecoderSCVI(
+                    n_latent, self.n_input_proteins, n_layers=n_layers, n_cat_list=[n_batch]
+                )
+            else:
+                self.adt_decoder = DecoderSCVI(
+                    n_latent, self.n_input_proteins, n_layers=n_layers, n_cat_list=[n_batch], n_hidden=n_hidden_adt
+                )  
     def get_latents(self, x, y=None):
         r""" returns the result of ``sample_from_posterior_z`` inside a list
 
