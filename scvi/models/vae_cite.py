@@ -105,12 +105,12 @@ class VAECITE(nn.Module):
         self.model_background = model_background
         self.latent_distribution = latent_distribution
 
-        if log_alpha_prior is None:
-            self.l_alpha_prior = torch.nn.Parameter(torch.randn(1))
-        elif type(log_alpha_prior) is not str:
-            self.l_alpha_prior = torch.tensor(log_alpha_prior)
+        if latent_distribution == 'ln' and log_alpha is None:
+            self.log_alpha = torch.nn.Parameter(torch.randn(1, ))
+        elif latent_distribution == 'ln' and type(log_alpha) == float:
+            self.log_alpha = torch.tensor(log_alpha)
         else:
-            self.l_alpha_prior = None
+            self.log_alpha = log_alpha  # None
 
         if self.umi_dispersion == "gene":
             self.px_r_umi = torch.nn.Parameter(torch.randn(n_input_genes))
@@ -452,16 +452,12 @@ class VAECITE(nn.Module):
         )
 
         # KL Divergence
-        ap = self.l_alpha_prior
-        if ap is None:
+        if self.log_alpha is None:
             mean = torch.zeros_like(qz_m)
             scale = torch.ones_like(qz_v)
         else:
-            mean = ap - (1 / self.n_latent) * (self.n_latent * ap)
-            scale = torch.sqrt(
-                (1 / torch.exp(ap)) * (1 - 2 / self.n_latent)
-                + (1 / self.n_latent ** 2) * (self.n_latent * 1 / torch.exp(ap))
-            )
+            mean = (self.log_alpha - (1 / self.n_latent)*(self.n_latent*self.log_alpha))
+            scale = (torch.sqrt((1 / torch.exp(self.log_alpha))*(1 - 2 / self.n_latent) + (1 / self.n_latent**2)*(self.n_latent*1/torch.exp(self.log_alpha))))
 
         kl_divergence_z = kl(Normal(qz_m, torch.sqrt(qz_v)), Normal(mean, scale)).sum(
             dim=1
