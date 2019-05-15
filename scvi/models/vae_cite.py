@@ -81,7 +81,7 @@ class VAECITE(nn.Module):
         adt_var_lib=None,
         b_mean=None,
         b_var=None,
-        log_alpha_prior=None,
+        log_alpha=None,
         model_background=False,
         linear_decoder=False,
         latent_distribution="ln"
