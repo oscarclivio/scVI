@@ -468,8 +468,8 @@ class VAECITE(nn.Module):
         ).sum(dim=1)
 
         if self.model_background is True:
-            local_b_mean_adt = self.b_mean * torch.ones_like(qb_m)
-            local_b_var_adt = self.b_var * torch.ones_like(qb_v)
+            local_b_mean_adt = self.b_mean
+            local_b_var_adt = self.b_var
             kl_divergence_b = kl(
                 Normal(qb_m, torch.sqrt(qb_v)),
                 Normal(local_b_mean_adt, torch.sqrt(local_b_var_adt)),
