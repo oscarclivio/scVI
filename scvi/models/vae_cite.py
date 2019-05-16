@@ -476,7 +476,7 @@ class VAECITE(nn.Module):
                 LogNormal(
                     self.adt_mean_lib, torch.sqrt(self.adt_var_lib)
                 )
-                .log_prob(ql_m["adt"])
+                .log_prob(torch.exp(ql_m["adt"]) + torch.exp(log_b).sum())
                 .sum(dim=1)
             )
             kl_divergence_l_adt = 0
