@@ -105,6 +105,9 @@ class VAECITE(nn.Module):
         self.model_background = model_background
         self.latent_distribution = latent_distribution
 
+        if model_background is True:
+            self.log_b = torch.nn.parameter(torch.randn(self.n_input_proteins, ))
+
         if latent_distribution == 'ln' and log_alpha is None:
             self.log_alpha = torch.nn.Parameter(torch.randn(1, ))
         elif latent_distribution == 'ln' and type(log_alpha) == float:
@@ -155,13 +158,6 @@ class VAECITE(nn.Module):
         self.l_adt_encoder = Encoder(
             self.n_input_proteins,
             1,
-            n_hidden=n_hidden_adt,
-            n_layers=n_layers,
-            dropout_rate=dropout_rate,
-        )
-        self.b_encoder = Encoder(
-            self.n_input_proteins,
-            self.n_input_proteins,
             n_hidden=n_hidden_adt,
             n_layers=n_layers,
             dropout_rate=dropout_rate,
@@ -241,20 +237,6 @@ class VAECITE(nn.Module):
         if self.log_variational:
             x = torch.log(1 + x)
         ql_m, ql_v, library = self.l_adt_encoder(x)
-        return library
-
-    def sample_from_posterior_b(self, x):
-        r""" samples the tensor of backgrounds from the posterior
-        #doesn't really sample, returns the tensor of the means of the posterior distribution
-
-        :param x: tensor of values with shape ``(batch_size, n_input_proteins)``
-        :param y: tensor of cell-types labels with shape ``(batch_size, n_labels)``
-        :return: tensor of shape ``(batch_size, 1)``
-        :rtype: :py:class:`torch.Tensor`
-        """
-        if self.log_variational:
-            x = torch.log(1 + x)
-        ql_m, ql_v, library = self.b_encoder(x)
         return library
 
     def get_sample_scale(self, x, batch_index=None, y=None, n_samples=1, mode="umi"):
@@ -339,7 +321,6 @@ class VAECITE(nn.Module):
         ql_v = {}
         ql_m["umi"], ql_v["umi"], library_umi = self.l_umi_encoder(umi_)
         ql_m["adt"], ql_v["adt"], library_adt = self.l_adt_encoder(adt_)
-        qb_m, qb_v, b = self.b_encoder(adt_)
 
         if n_samples > 1:
             qz_m = qz_m.unsqueeze(0).expand((n_samples, qz_m.size(0), qz_m.size(1)))
@@ -393,7 +374,7 @@ class VAECITE(nn.Module):
                 "adt"
             ] = self.adt_decoder(self.adt_dispersion, z, ql_m["adt"], batch_index, y)
             if self.model_background is True:
-                px_rate["adt"] += torch.exp(b)
+                px_rate["adt"] += torch.exp(self.log_b)
             if self.adt_dispersion == "protein-label":
                 # px_r gets transposed - last dimension is nb genes
                 px_r["adt"] = F.linear(one_hot(y, self.n_labels), self.px_r_adt)
@@ -468,12 +449,7 @@ class VAECITE(nn.Module):
         ).sum(dim=1)
 
         if self.model_background is True:
-            local_b_mean_adt = self.b_mean
-            local_b_var_adt = self.b_var
-            kl_divergence_b = kl(
-                Normal(qb_m, torch.sqrt(qb_v)),
-                Normal(local_b_mean_adt, torch.sqrt(local_b_var_adt)),
-            ).sum(dim=1)
+            background_log_prob = Normal(self.b_mean, torch.sqrt(self.b_var)).log_prob(self.log_b).sum()
             kl_divergence_l_adt = 0
         else:
             local_l_mean_adt = self.adt_mean_lib.device()
@@ -482,12 +458,12 @@ class VAECITE(nn.Module):
                 Normal(ql_m["adt"], torch.sqrt(ql_v["adt"])),
                 Normal(local_l_mean_adt, torch.sqrt(local_l_var_adt)),
             ).sum(dim=1)
-            kl_divergence_b = 0
+            background_log_prob = 0
 
         kl_divergence = kl_divergence_z
         return (
             reconst_loss_umi + kl_divergence_l_umi,
-            reconst_loss_adt + kl_divergence_b + kl_divergence_l_adt,
+            reconst_loss_adt + background_log_prob + kl_divergence_l_adt,
             kl_divergence,
         )
         
