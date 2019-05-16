@@ -84,7 +84,7 @@ class VAECITE(nn.Module):
         log_alpha=None,
         model_background=False,
         linear_decoder=False,
-        latent_distribution="ln"
+        latent_distribution="normal"
     ):
         super().__init__()
         self.umi_dispersion = umi_dispersion
