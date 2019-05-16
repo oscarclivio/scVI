@@ -106,7 +106,7 @@ class VAECITE(nn.Module):
         self.latent_distribution = latent_distribution
 
         if model_background is True:
-            self.log_b = torch.nn.parameter(torch.randn(self.n_input_proteins, ))
+            self.log_b = torch.nn.Parameter(torch.randn(self.n_input_proteins, ))
 
         if latent_distribution == 'ln' and log_alpha is None:
             self.log_alpha = torch.nn.Parameter(torch.randn(1, ))
