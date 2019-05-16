@@ -106,14 +106,16 @@ class VAECITE(nn.Module):
         self.latent_distribution = latent_distribution
 
         if model_background is True:
-            # self.log_b = torch.nn.Parameter(torch.randn(self.n_input_proteins))
-            self.b_encoder = Encoder(
-                self.n_input_proteins,
-                self.n_input_proteins,
-                n_hidden=n_hidden_adt,
-                n_layers=n_layers,
-                dropout_rate=dropout_rate,
-            )
+            self.log_b_mean = torch.nn.Parameter(torch.randn(self.n_input_proteins))
+            self.log_b_log_scale = torch.nn.Parameter(torch.randn(self.n_input_proteins))
+
+            # self.b_encoder = Encoder(
+            #     self.n_input_proteins,
+            #     self.n_input_proteins,
+            #     n_hidden=n_hidden_adt,
+            #     n_layers=n_layers,
+            #     dropout_rate=dropout_rate,
+            # )
 
         if latent_distribution == "ln" and log_alpha is None:
             self.log_alpha = torch.nn.Parameter(torch.randn(1))
@@ -340,7 +342,10 @@ class VAECITE(nn.Module):
         ql_v = {}
         ql_m["umi"], ql_v["umi"], library_umi = self.l_umi_encoder(umi_)
         ql_m["adt"], ql_v["adt"], library_adt = self.l_adt_encoder(adt_)
-        log_b, _, _ = self.b_encoder(adt_)
+
+        if self.model_background is True:
+            # Background sample size (batch size by number of proteins samples)
+            log_b = Normal(self.log_b_mean, torch.exp(self.log_b_log_scale)).rsample(qz_m.size(0))
 
         if n_samples > 1:
             qz_m = qz_m.unsqueeze(0).expand((n_samples, qz_m.size(0), qz_m.size(1)))
@@ -369,6 +374,9 @@ class VAECITE(nn.Module):
                 .expand((n_samples, ql_v["adt"].size(0), ql_v["adt"].size(1)))
             )
             library_adt = Normal(ql_m["adt"], ql_v["adt"].sqrt()).sample()
+            if self.model_background is True:
+                log_b = Normal(self.log_b_mean, torch.exp(self.log_b_log_scale)).rsample(n_samples, qz_m.size(0))
+
 
         px_scale = {}
         px_r = {}
@@ -420,7 +428,7 @@ class VAECITE(nn.Module):
             else:
                 px_r["adt"] = var
 
-        return (px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, log_b)
+        return (px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v)
 
     def forward(self, x, local_l_mean_umi, local_l_var_umi, batch_index=None, y=None):
         r""" Returns the reconstruction loss and the Kullback divergences
@@ -437,7 +445,7 @@ class VAECITE(nn.Module):
         """
         # Parameters for z latent distribution
 
-        px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, log_b = self.inference(
+        px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v = self.inference(
             x, batch_index, y
         )
         reconst_loss_umi, reconst_loss_adt = self._reconstruction_loss(
