@@ -474,7 +474,7 @@ class VAECITE(nn.Module):
             )
             library_log_prob = (
                 LogNormal(
-                    self.adt_mean_lib.device(), torch.sqrt(self.adt_var_lib.device())
+                    self.adt_mean_lib, torch.sqrt(self.adt_var_lib)
                 )
                 .log_prob(ql_m["adt"])
                 .sum(dim=1)
