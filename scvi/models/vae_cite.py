@@ -349,9 +349,6 @@ class VAECITE(nn.Module):
                 .expand((n_samples, ql_v["adt"].size(0), ql_v["adt"].size(1)))
             )
             library_adt = Normal(ql_m["adt"], ql_v["adt"].sqrt()).sample()
-            qb_m = qb_m.unsqueeze(0).expand((n_samples, qb_m.size(0), qb_m.size(1)))
-            qb_v = qb_v.unsqueeze(0).expand((n_samples, qb_v.size(0), qb_v.size(1)))
-            b = Normal(qb_m, qb_v.sqrt()).sample()
 
         px_scale = {}
         px_r = {}
@@ -405,9 +402,6 @@ class VAECITE(nn.Module):
             z,
             ql_m,
             ql_v,
-            qb_m,
-            qb_v,
-            b,
         )
 
     def forward(self, x, local_l_mean_umi, local_l_var_umi, batch_index=None, y=None):
@@ -425,7 +419,7 @@ class VAECITE(nn.Module):
         """
         # Parameters for z latent distribution
 
-        px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v, qb_m, qb_v, b = self.inference(
+        px_scale, px_r, px_rate, px_dropout, qz_m, qz_v, z, ql_m, ql_v = self.inference(
             x, batch_index, y
         )
         reconst_loss_umi, reconst_loss_adt = self._reconstruction_loss(
@@ -463,7 +457,7 @@ class VAECITE(nn.Module):
         kl_divergence = kl_divergence_z
         return (
             reconst_loss_umi + kl_divergence_l_umi,
-            reconst_loss_adt + background_log_prob + kl_divergence_l_adt,
+            reconst_loss_adt - background_log_prob + kl_divergence_l_adt,
             kl_divergence,
         )
         
