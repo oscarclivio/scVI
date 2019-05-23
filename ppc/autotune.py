@@ -15,10 +15,10 @@ from typing import Tuple
 from functools import partial
 
 from zifa_full import VAE as VAE_zifa_full
-from scvi.dataset import SyntheticDatasetCorr2, ZISyntheticDatasetCorrDistinct
 
 from scvi.dataset import CortexDataset, RetinaDataset, HematoDataset, PbmcDataset, \
-    BrainSmallDataset, ZISyntheticDatasetCorr, SyntheticDatasetCorr
+    BrainSmallDataset, SyntheticDatasetCorr, ZISyntheticDatasetCorr,\
+    SyntheticDatasetCorrLogNormal, ZISyntheticDatasetCorrLogNormal, LogPoissonDataset, ZILogPoissonDataset
 
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -42,25 +42,24 @@ datasets_mapper = {
     'retina': RetinaDataset,
     'hemato': HematoDataset,
     'brain_small': BrainSmallDataset,
-    # 'nb_dataset': NBDataset,
-    # 'zinb_dataset': ZINBDataset,
-    # 'mixed_25_dataset': Mixed25Dataset,
-    # 'mixed_50_dataset': Mixed50Dataset,
-    # 'mixed_75_dataset': Mixed75Dataset,
 
-    'corr_nb_dataset': SyntheticDatasetCorr,
-    'corr_zinb_dataset': ZISyntheticDatasetCorr,
-    'corr_zifa_dataset': partial(ZISyntheticDatasetCorr, dropout_coef_high=0.3, lam_dropout_high=0.5,
-                                     dropout_coef_low=0.6, lam_dropout_low=0.5)
+    'log_poisson_nb_dataset_6000': partial(LogPoissonDataset, n_cells=6000),
+
+    'log_poisson_zinb_dataset_6000': partial(ZILogPoissonDataset, n_cells=6000),
+
+    'log_poisson_zinb_dataset_8000': partial(ZILogPoissonDataset, n_cells=8000),
+
+    'log_poisson_nb_dataset_8000': partial(LogPoissonDataset, n_cells=8000)
 
     }
 
 
 gene_dataset = datasets_mapper[dataset_name]()
-# gene_dataset = BrainSmallDataset()
 gene_dataset.subsample_genes(new_n_genes=nb_genes)
 
 savefile = '{}_{}_{}_{}_results.json'.format(dataset_name, mode, nb_genes, max_evals)
+
+assert mode in ["zinb", "nb"]
 
 
 def compute_criterion(
@@ -93,8 +92,6 @@ def compute_criterion(
     n_hidden = space['n_hidden']
     n_layers = space['n_layers']
     dropout_rate = space['dropout_rate']
-    # Trainer
-    kl_weight = space['kl_weight']
     # train func
     n_epochs = n_epochs
     lr = space['lr']
@@ -103,33 +100,23 @@ def compute_criterion(
     print("Use batches : ", use_batches)
 
     # Train a model
-    if mode == "full":
-        
-        vae = VAE_zifa_full(
-            n_genes=gene_dataset.nb_genes,
-            n_batch=gene_dataset.n_batches * use_batches,
-            n_latent=n_latent,
-            n_hidden=n_hidden,
-            n_layers=n_layers,
-            dropout_rate=dropout_rate
-        )
-        
-    else:
-        vae = VAE(
-            n_input=gene_dataset.nb_genes,
-            n_batch=gene_dataset.n_batches * use_batches,
-            n_latent=n_latent,
-            n_hidden=n_hidden,
-            n_layers=n_layers,
-            dropout_rate=dropout_rate,
-            reconstruction_loss=mode
-        )
+
+
+    vae = VAE(
+        n_input=gene_dataset.nb_genes,
+        n_batch=gene_dataset.n_batches * use_batches,
+        n_latent=n_latent,
+        n_hidden=n_hidden,
+        n_layers=n_layers,
+        dropout_rate=dropout_rate,
+        reconstruction_loss=mode
+    )
 
     trainer = UnsupervisedTrainer(
         vae,
         gene_dataset,
         train_size=train_size,
-        kl=kl_weight,
+        kl=1.,
         use_cuda=use_cuda,
         # metrics_to_monitor='ll',
         frequency=1,
@@ -176,9 +163,7 @@ my_space = {
     'n_latent': hp.choice('n_latent', n_latent_choices),  # int = 5,
     'n_hidden': hp.choice('n_hidden', n_hidden_choices),  # int = 128,
     'n_layers': hp.choice('n_layers', n_layers_choices),  # int = 1,
-    'dropout_rate': hp.uniform('dropout_rate', 0.1, 0.9),  # float = 0.1,
-    # Trainer
-    'kl_weight': hp.uniform('kl_weight', 0.5, 1.5),  # float = None,
+    'dropout_rate': hp.uniform('dropout_rate', 0.1, 0.9),  # float = 0.1
     # train func
     'lr': hp.choice('lr', lr_choices),  # float = 1e-3,
 }
@@ -201,7 +186,5 @@ best["n_hidden"] = n_hidden_choices[best["n_hidden"]]
 print(best)
 print(trials.results)
 
-results = trials.results[0]
-print(results)
 with open(savefile, 'w') as fp:
     json.dump(best, fp, sort_keys=True, indent=4)

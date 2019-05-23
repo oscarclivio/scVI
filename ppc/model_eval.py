@@ -1,7 +1,7 @@
 from scvi.inference.inference import UnsupervisedTrainer
 from scvi.dataset import CortexDataset, RetinaDataset, HematoDataset, PbmcDataset, \
-    BrainSmallDataset, ZISyntheticDatasetCorr, SyntheticDatasetCorr
-from scvi.dataset import SyntheticDatasetCorr2, ZISyntheticDatasetCorrDistinct
+    BrainSmallDataset, ZISyntheticDatasetCorr, SyntheticDatasetCorr, LogPoissonDataset, ZILogPoissonDataset
+from scvi.dataset.synthetic import SyntheticDatasetCorrLogNormal, ZISyntheticDatasetCorrLogNormal
 from scvi.models import VAE
 
 import copy
@@ -13,7 +13,6 @@ from statsmodels.stats.multitest import multipletests
 from metrics import *
 from zifa_full import VAE as VAE_zifa_full
 # from synthetic_data import NBDataset, ZINBDataset, Mixed25Dataset, Mixed50Dataset, Mixed75Dataset
-from functools import partial
 
 
 class ModelEval:
@@ -116,16 +115,19 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--dataset', type=str)
     parser.add_argument('--n_experiments', type=int, default=10)
-    parser.add_argument('--number_genes', type=int, default=1200)
+    parser.add_argument('--nb_genes', type=int, default=1200)
     parser.add_argument('--use_batches', default=True, type=lambda x: (str(x).lower() == 'true'))
+    parser.add_argument('--nb', default=True, type=lambda x: (str(x).lower() == 'true'))
+    parser.add_argument('--zinb', default=True, type=lambda x: (str(x).lower() == 'true'))
     parser.add_argument('--nb_hyperparams_json', type=str, default=None)
     parser.add_argument('--zinb_hyperparams_json', type=str, default=None)
-    parser.add_argument('--zifa_full_hyperparams_json', type=str, default=None)
 
     args = parser.parse_args()
 
+    nb = args.nb
+    zinb = args.zinb
     dataset_name = args.dataset
-    number_genes = args.number_genes
+    nb_genes = args.nb_genes
     n_experiments = args.n_experiments
     use_batches = args.use_batches
 
@@ -135,7 +137,7 @@ if __name__ == '__main__':
             with open(json_path) as file:
                 hyperparams_str = file.read()
                 hyperparams = json.loads(hyperparams_str)
-            kl = hyperparams.pop('kl_weight')
+            kl = 1.
             lr = hyperparams.pop('lr')
         else:
             hyperparams = {}
@@ -149,12 +151,9 @@ if __name__ == '__main__':
 
     nb_hyperparams, kl_nb, lr_nb = read_json(args.nb_hyperparams_json)
     zinb_hyperparams, kl_zinb, lr_zinb = read_json(args.zinb_hyperparams_json)
-    zifa_full_hyperparams, kl_zifa_full, lr_zifa_full = read_json(args.zifa_full_hyperparams_json)
 
     print(nb_hyperparams, kl_nb, lr_nb)
     print(zinb_hyperparams, kl_zinb, lr_zinb)
-    print(zifa_full_hyperparams, kl_zifa_full, lr_zifa_full)
-
 
     datasets_mapper = {
         'pbmc': PbmcDataset,
@@ -168,28 +167,55 @@ if __name__ == '__main__':
         # 'mixed_50_dataset': Mixed50Dataset,
         # 'mixed_75_dataset': Mixed75Dataset,
 
-        'corr_nb_dataset': SyntheticDatasetCorr,
-        'corr_zinb_dataset': ZISyntheticDatasetCorr,
-        'corr_zifa_dataset': partial(ZISyntheticDatasetCorr, dropout_coef_high=0.3, lam_dropout_high=0.5,
-                                         dropout_coef_low=0.6, lam_dropout_low=0.5)
+        'corr_nb_dataset_800': partial(SyntheticDatasetCorr, lam_0=180, n_cells_cluster=800,
+                                           weight_high=6, weight_low=3.5, n_overlap=0,
+                                           n_genes_high=15, n_clusters=3),
+
+        'corr_nb_dataset_2000': partial(SyntheticDatasetCorr, lam_0=180, n_cells_cluster=2000,
+                                       weight_high=6, weight_low=3.5, n_overlap=0,
+                                       n_genes_high=15, n_clusters=3),
+
+        'log_poisson_nb_dataset_6000': partial(LogPoissonDataset, n_cells=6000),
+
+        'log_poisson_zinb_dataset_1000': partial(ZILogPoissonDataset, n_cells=1000),
+
+        'log_poisson_zinb_dataset_6000': partial(ZILogPoissonDataset, n_cells=6000),
+
+        'log_poisson_zinb_dataset_8000': partial(ZILogPoissonDataset, n_cells=8000),
+
+        'log_poisson_nb_dataset_8000': partial(LogPoissonDataset, n_cells=8000),
+
+        'log_poisson_nb_dataset_10000': partial(LogPoissonDataset, n_cells=10000),
+
+        'corr_nb_dataset_2000_log_normal': partial(SyntheticDatasetCorrLogNormal, library_mu=np.log(250),
+                                                   n_cells_cluster=2000,
+                                                   weight_high=3, weight_low=1, n_overlap=0,
+                                                   n_genes_high=15, n_clusters=3),
+
+        'corr_zinb_dataset': partial(ZISyntheticDatasetCorr, lam_0=180, n_cells_cluster=2000,
+                                             weight_high=6, weight_low=3.5, n_overlap=0,
+                                             n_genes_high=15, n_clusters=3,
+                                             dropout_coef_high=0.05, dropout_coef_low=0.08,
+                                             lam_dropout_high=0., lam_dropout_low=0.),
 
     }
 
     MY_DATASET = datasets_mapper[dataset_name]()
-    MY_DATASET.subsample_genes(new_n_genes=number_genes)
+    MY_DATASET.subsample_genes(new_n_genes=nb_genes)
 
     USE_BATCHES = use_batches 
     N_EXPERIMENTS = n_experiments
     N_EPOCHS = 150
     N_LL_MC_SAMPLES = 100
     MY_METRICS = [
+        InferParamsOnZerosMetric(tag='zero_params', trainer=None, mask_zero=(MY_DATASET.X == 0)),
+        GeneSpecificDropoutMetric(tag='gene_dropout', trainer=None),
         LikelihoodMetric(tag='ll', trainer=None, n_mc_samples=N_LL_MC_SAMPLES),
         GeneSpecificLikelihoodMetric(tag='gene_ll', trainer=None),
-        ZIFAParamsMetric(tag='zifa_params', trainer=None),
         ImputationMetric(tag='imputation', trainer=None),
         SummaryStatsMetric(tag='t_dropout', trainer=None, stat_name='ks', phi_name='dropout'),
         SummaryStatsMetric(tag='t_cv', trainer=None, stat_name='ks', phi_name='cv'),
-        SummaryStatsMetric(tag='t_ratio', trainer=None, stat_name='ks', phi_name='ratio')
+        SummaryStatsMetric(tag='t_ratio', trainer=None, stat_name='ks', phi_name='ratio'),
     ]
 
 
@@ -203,32 +229,20 @@ if __name__ == '__main__':
     def nb_model():
         return my_model_fn('nb', hyperparams=nb_hyperparams)
 
-    def zifa_full_fn():
-        return VAE_zifa_full(MY_DATASET.nb_genes, n_batch=MY_DATASET.n_batches * USE_BATCHES,
-                             decay_mode='gene', **zifa_full_hyperparams)
-
-
     print("Use batches : ", USE_BATCHES)
 
+    if nb :
+        print("Working on NB")
+        nb_eval = ModelEval(model_fn=nb_model, dataset=MY_DATASET, metrics=MY_METRICS)
+        nb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
+                            lr=lr_nb, kl=kl_nb)
+        nb_eval.write_csv(os.path.join(dataset_name, 'nb_{}.csv'.format(dataset_name)))
+        nb_eval.write_pickle(os.path.join(dataset_name, 'nb_{}.p'.format(dataset_name)))
 
-    print("Working on ZIFA")
-    zifa_full_eval = ModelEval(model_fn=zifa_full_fn, dataset=MY_DATASET, metrics=MY_METRICS)
-    zifa_full_eval .multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
-                                lr=lr_zifa_full, kl=kl_zifa_full)
-    zifa_full_eval.write_csv(os.path.join(dataset_name, 'zifa_full_{}.csv'.format(dataset_name)))
-    zifa_full_eval.write_pickle(os.path.join(dataset_name, 'zifa_full_{}.p'.format(dataset_name)))
-
-
-    print("Working on NB")
-    nb_eval = ModelEval(model_fn=nb_model, dataset=MY_DATASET, metrics=MY_METRICS)
-    nb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
-                        lr=lr_nb, kl=kl_nb)
-    nb_eval.write_csv(os.path.join(dataset_name, 'nb_{}.csv'.format(dataset_name)))
-    nb_eval.write_pickle(os.path.join(dataset_name, 'nb_{}.p'.format(dataset_name)))
-
-    print("Working on ZINB")
-    zinb_eval = ModelEval(model_fn=zinb_model, dataset=MY_DATASET, metrics=MY_METRICS)
-    zinb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
-                          lr=lr_zinb, kl=kl_zinb)
-    zinb_eval.write_csv(os.path.join(dataset_name, 'zinb_{}.csv'.format(dataset_name)))
-    zinb_eval.write_pickle(os.path.join(dataset_name, 'zinb_{}.p'.format(dataset_name)))
+    if zinb:
+        print("Working on ZINB")
+        zinb_eval = ModelEval(model_fn=zinb_model, dataset=MY_DATASET, metrics=MY_METRICS)
+        zinb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
+                              lr=lr_zinb, kl=kl_zinb)
+        zinb_eval.write_csv(os.path.join(dataset_name, 'zinb_{}.csv'.format(dataset_name)))
+        zinb_eval.write_pickle(os.path.join(dataset_name, 'zinb_{}.p'.format(dataset_name)))

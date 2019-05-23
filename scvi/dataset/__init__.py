@@ -2,7 +2,8 @@ from .brain_large import BrainLargeDataset
 from .cortex import CortexDataset
 from .dataset import GeneExpressionDataset
 from .synthetic import SyntheticDataset, SyntheticRandomDataset, SyntheticDatasetCorr, \
-    SyntheticDatasetCorr, ZISyntheticDatasetCorr
+    ZISyntheticDatasetCorr, SyntheticDatasetCorrLogNormal, ZISyntheticDatasetCorrLogNormal, \
+    LogPoissonDataset, ZILogPoissonDataset
 from .cite_seq import CiteSeqDataset, CbmcDataset
 from .pbmc import PbmcDataset, PurifiedPBMCDataset
 from .hemato import HematoDataset
@@ -35,4 +36,8 @@ __all__ = ['SyntheticDataset',
            'PurifiedPBMCDataset',
            'SyntheticDatasetCorr',
            'ZISyntheticDatasetCorr',
+           'SyntheticDatasetCorrLogNormal',
+           'ZISyntheticDatasetCorrLogNormal',
+           'LogPoissonDataset',
+           'ZILogPoissonDataset'
            ]

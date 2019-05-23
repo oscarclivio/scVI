@@ -26,6 +26,7 @@ class Metric:
         self.tag = tag
         self.keys = []
 
+    @torch.no_grad()
     def compute(self):
         pass
 
@@ -129,18 +130,107 @@ class LikelihoodMetric(Metric):
         ll = self.trainer.test_set.marginal_ll(verbose=self.verbose,
                                                n_mc_samples=self.n_mc_samples)
         return self.output_dict({'ll': ll})
-    
+
+
 class GeneSpecificLikelihoodMetric(Metric):
-    
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.name = "gene_specific_dropout"
+
+    @torch.no_grad()
+    def compute(self):
+        lls = gene_specific_ll(self.trainer.model, self.trainer.test_set)
+
+        return self.output_dict({'gene_ll': lls})
+
+
+class GeneSpecificDropoutMetric(Metric):
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.name = "gene_specific_likelihood"
 
+    @torch.no_grad()
     def compute(self):
-        
-        lls = gene_specific_ll(self.trainer.model, self.trainer.test_set)
-        
-        return self.output_dict({'gene_ll': lls})
+        outputs = {}
+        if hasattr(self.trainer.model, 'reconstruction_loss'):
+            if self.trainer.model.reconstruction_loss == 'zinb':
+
+                train_set = self.trainer.train_set
+                dropout_logits_train = []
+                for tensors in train_set.update({"batch_size": 128}):
+                    sample_batch, _, _, batch_index, labels = tensors
+                    px_dropout = self.trainer.model.inference(sample_batch,batch_index=batch_index,
+                                                      y=labels)[3]
+                    dropout_logits_train.append(px_dropout.cpu().numpy())
+                dropout_logits_train = np.concatenate(dropout_logits_train)
+                dropout_probs_train = 1. / (1. + np.exp(-dropout_logits_train))
+
+                test_set = self.trainer.test_set
+                dropout_logits_test = []
+                for tensors in test_set.update({"batch_size": 128}):
+                    sample_batch, _, _, batch_index, labels = tensors
+                    px_dropout = self.trainer.model.inference(sample_batch,batch_index=batch_index,
+                                                      y=labels)[3]
+                    dropout_logits_test.append(px_dropout.cpu().numpy())
+                dropout_logits_test = np.concatenate(dropout_logits_test)
+                dropout_probs_test = 1. / (1. + np.exp(-dropout_logits_test))
+
+                dropout_logits_all = np.concatenate([dropout_logits_train, dropout_logits_test])
+                dropout_probs_all = np.concatenate([dropout_probs_train, dropout_probs_test])
+
+                outputs['gene_dropout_logits_train'] = dropout_logits_train.mean(axis=0)
+                outputs['gene_dropout_logits_test'] = dropout_logits_test.mean(axis=0)
+                outputs['gene_dropout_logits_all'] = dropout_logits_all.mean(axis=0)
+
+                outputs['gene_dropout_probs_train'] = dropout_probs_train.mean(axis=0)
+                outputs['gene_dropout_probs_test'] = dropout_probs_test.mean(axis=0)
+                outputs['gene_dropout_probs_all'] = dropout_probs_all.mean(axis=0)
+
+
+        return self.output_dict(outputs)
+
+
+class InferParamsOnZerosMetric(Metric):
+
+    def __init__(self, mask_zero=None, **kwargs):
+        self.mask_zero = mask_zero
+        super().__init__(**kwargs)
+        self.name = "zero_infer_params"
+
+    @torch.no_grad()
+    def compute(self):
+        outputs = {}
+        if hasattr(self.trainer.model, 'reconstruction_loss'):
+            if self.trainer.model.reconstruction_loss == 'zinb':
+
+                posterior = self.trainer.create_posterior(self.trainer.model, self.trainer.gene_dataset,
+                                                          indices=np.arange(len(self.trainer.gene_dataset)))
+
+                dropout_logits_full = []
+                scales_full = []
+                rates_full = []
+                for tensors in posterior:
+                    sample_batch, _, _, batch_index, labels = tensors
+                    px_scale, _, px_rate, px_dropout = self.trainer.model.inference(sample_batch,
+                                                                                    batch_index=batch_index,
+                                                                                    y=labels)[0:4]
+                    scales_full.append(px_scale.cpu().numpy())
+                    rates_full.append(px_rate.cpu().numpy())
+                    dropout_logits_full.append(px_dropout.cpu().numpy())
+                dropout_logits_full = np.concatenate(dropout_logits_full)
+                scales_full = np.concatenate(scales_full)
+                rates_full = np.concatenate(rates_full)
+                dropout_probs_full = 1. / (1. + np.exp(-dropout_logits_full))
+
+
+                outputs['zero_dropout_probs_all'] = dropout_probs_full[self.mask_zero]
+                outputs['zero_scales_all'] = scales_full[self.mask_zero]
+                outputs['zero_rates_all'] = rates_full[self.mask_zero]
+
+
+        return self.output_dict(outputs)
 
 class ImputationMetric(Metric):
     def __init__(self, n_samples_imputation=1, **kwargs):
@@ -238,6 +328,8 @@ class SummaryStatsMetric(Metric):
                 "phi_real_gene": phi_real_gene})
         else:
             raise AttributeError('{} is not a valid statistic choice.', self.stat_name)
+
+
 
 
 class ZIFAParamsMetric(Metric):
