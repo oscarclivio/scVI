@@ -4,6 +4,8 @@ import numpy as np
 
 from . import GeneExpressionDataset
 
+import torch
+
 
 class SyntheticDataset(GeneExpressionDataset):
     def __init__(self, batch_size=200, nb_genes=100, n_batches=2, n_labels=3):
@@ -181,3 +183,66 @@ class ZISyntheticDatasetCorr(SyntheticDatasetCorr):
         assert np.abs(self.probas_zero_bio_tech_high.sum() - 1) <= 1e-8
         assert np.abs(self.probas_zero_bio_tech_low.sum() - 1) <= 1e-8
         return data * mask.astype(np.float32)
+
+class LogPoissonDatasetGeneral(GeneExpressionDataset):
+
+    def __init__(self, pi, mus, sigmas, n_cells=100, dropout=0.):
+
+        assert(len(pi) == len(mus))
+        assert(len(pi) == len(sigmas))
+
+        n_classes = len(pi)
+
+        assert(mus[0].size(0) == sigmas[0].size(0))
+
+        n_genes = mus[0].size(0)
+
+        print("Number of genes:", n_genes)
+        print("Number of cell types", n_classes)
+
+        self.pi = pi
+        self.mus = mus
+        self.sigmas = sigmas
+        self.n_cells = n_cells
+        self.dropout = dropout
+
+
+        self.dists = []
+
+        for cl in range(n_classes):
+            self.dists.append(torch.distributions.MultivariateNormal(loc=mus[cl], covariance_matrix=sigmas[cl]))
+
+
+        cell_type = torch.distributions.Bernoulli(probs=torch.tensor(pi)).sample((n_cells,))
+
+        norm = torch.zeros((n_cells, n_genes)).double()
+        for cl in range(n_classes):
+            mask = (cell_type == cl).squeeze()
+            norm[mask, :] = self.dists[cl].sample((mask.sum(),)).double()
+
+        print("Poisson rates ", norm.exp().cpu().numpy())
+
+        gene_expressions = np.expand_dims(torch.distributions.Poisson(rate=norm.exp()).sample(), axis=0)
+
+        labels = np.expand_dims(cell_type, axis=0)
+
+        gene_expressions = self.mask(gene_expressions)
+
+        gene_names = np.arange(n_genes).astype(str)
+
+        super().__init__(
+            *GeneExpressionDataset.get_attributes_from_list(gene_expressions, list_labels=labels),
+            gene_names=gene_names)
+
+    def mask(self, data):
+
+        if self.dropout == 0.:
+            return data
+
+        else:
+            dist_bernoulli = torch.distributions.Bernoulli(torch.tensor([1 - self.dropout]))
+            mask_keep = dist_bernoulli.sample(sample_shape=data.size()).double()
+
+            return data * mask_keep
+
+
