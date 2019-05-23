@@ -3,6 +3,7 @@ from scipy.stats import ttest_1samp, ks_2samp
 import numpy as np
 import torch
 from scvi.models.log_likelihood import gene_specific_ll
+import scipy
 
 
 class Metric:
@@ -195,6 +196,8 @@ class GeneSpecificDropoutMetric(Metric):
 class InferParamsOnZerosMetric(Metric):
 
     def __init__(self, mask_zero=None, **kwargs):
+        if isinstance(mask_zero,scipy.sparse.csr.csr_matrix):
+            mask_zero = np.array(mask_zero.toarray())
         self.mask_zero = mask_zero
         super().__init__(**kwargs)
         self.name = "zero_infer_params"
@@ -223,7 +226,6 @@ class InferParamsOnZerosMetric(Metric):
                 scales_full = np.concatenate(scales_full)
                 rates_full = np.concatenate(rates_full)
                 dropout_probs_full = 1. / (1. + np.exp(-dropout_logits_full))
-
 
                 outputs['zero_dropout_probs_all'] = dropout_probs_full[self.mask_zero]
                 outputs['zero_scales_all'] = scales_full[self.mask_zero]
