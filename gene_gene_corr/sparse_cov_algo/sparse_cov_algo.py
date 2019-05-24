@@ -1,5 +1,7 @@
 import numpy as np
 
+from sklearn.covariance import graphical_lasso
+
 def build_emp_cov_matrix(X):
 
     n = X.shape[0]
@@ -207,7 +209,8 @@ if __name__ == '__main__':
     n = 200
     p = 100
 
-    sigma_gt = np.identity(p) + 1/(10*p) * np.random.binomial(1, 0.1, (p,p))
+    sigma_gt = np.identity(p) + 0.1 * np.random.binomial(1, 0.1, (p,p))
+    sigma_gt[sigma_gt > 1.] = 1.
     assert(np.min(np.linalg.eig(sigma_gt)[0]) > 1e-4)
     means_gt = np.zeros((p,))
 
@@ -215,8 +218,8 @@ if __name__ == '__main__':
 
     emp_cov = build_emp_cov_matrix(X)
 
-    weights_mat = np.ones((p, p))
-    lmb_weights = 1e-3
+    weights_mat = np.ones((p, p)) - np.identity(p)
+    lmb_weights = 0.1
 
     TO_TEST = [0, 2]
 
@@ -262,13 +265,15 @@ if __name__ == '__main__':
 
         print("\nComplete algo : ")
 
-        sigma = estimate_cov_matrix(X, weights_mat, lmb_weights, lr=1e-3,
-                                    lr_alt_dir=1e-1, eps=1e-5, n_iters_max = 1000, dichotomy=True)
+        sigma = estimate_cov_matrix(X, weights_mat, lmb_weights, lr=1e-2,
+                                    lr_alt_dir=1e-2, eps=6e-6, n_iters_max = 2000, dichotomy=True)
+
+        print("GROUND TRUTH")
+        print(sigma_gt)
 
         print("\n\nRESULT")
         print(sigma)
-        print("GROUND TRUTH")
-        print(sigma_gt)
+
 
         diff = np.abs(sigma_gt - sigma)
         print("Max abs diff :")
@@ -282,7 +287,33 @@ if __name__ == '__main__':
         sigma_bis = sigma
         for ind in range(p):
             sigma_bis[ind,ind] = 0.
-        print("Average value of non-diagonal predicted non-zeros :", np.mean(sigma[sigma > 0.]))
+        print("Average value of non-diagonal predicted non-zeros :", np.mean(sigma_bis[sigma_bis > 0.]))
+
+
+        print("GRAPHICAL LASSO COVARIANCE MATRIX :")
+
+        sigma_gl = graphical_lasso(emp_cov=emp_cov, alpha=0.2)[0]
+        print(sigma_gl)
+        print(sigma_gl.shape)
+
+        diff = np.abs(sigma_gt - sigma_gl)
+        print("Max abs diff :")
+        print(np.max(diff))
+        print("Mean abs diff :")
+        print(np.mean(diff[sigma_gt > 0.]))
+
+        print("Ratio of non-zeros (gt vs predicted) :", (sigma_gt > 0.).sum() / (p*p), (sigma_gl > 0.).sum() / (p*p))
+
+        print("Average value of diagonal predicted non-zeros :", np.trace(sigma_gl) / p)
+        sigma_bis = sigma_gl
+        for ind in range(p):
+            sigma_bis[ind,ind] = 0.
+        print("Average value of non-diagonal predicted non-zeros :", np.mean(sigma_bis[sigma_bis > 0.]))
+
+
+
+
+
 
         print("EMPIRICAL COVARIANCE MATRIX :")
         sigma_emp = build_emp_cov_matrix(X)
@@ -300,7 +331,7 @@ if __name__ == '__main__':
         sigma_bis = sigma_emp
         for ind in range(p):
             sigma_bis[ind,ind] = 0.
-        print("Average value of non-diagonal predicted non-zeros :", np.mean(sigma_emp[sigma_emp > 0.]))
+        print("Average value of non-diagonal predicted non-zeros :", np.mean(sigma_bis[sigma_bis > 0.]))
 
 
 

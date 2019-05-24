@@ -3,6 +3,7 @@ import torch
 import seaborn as sns
 sns.set()
 import matplotlib.pyplot as plt
+from scvi.inference.autotune import auto_tune_scvi_model
 
 torch.manual_seed(0)
 np.random.seed(0)
@@ -16,6 +17,7 @@ from scvi.inference import UnsupervisedTrainer
 from scvi.models.vae import VAE
 from typing import Tuple
 from functools import partial
+import logging
 
 from scvi.dataset import LogPoissonDatasetGeneral
 
@@ -108,11 +110,49 @@ def get_params_inference(trainer, dataset, posterior_type='full', n_samples=1):
         return np.concatenate(px_scale_list), np.concatenate(px_r_list), \
                np.concatenate(px_rate_list), None
 
+def autotune_fixed_loss(dataset, reconstruction_loss='nb'):
+
+    lr_choices = [1e-2, 1e-3, 1e-4]
+    n_latent_choices = list(range(3, 31))
+    n_hidden_choices = [32, 64, 128, 256]
+    n_layers_choices = [1, 2, 3, 4, 5]
+
+    space = {
+        "model_tunable_kwargs": {
+            "n_latent": hp.choice("n_latent", n_latent_choices),  # [5, 15]
+            "n_hidden": hp.choice("n_hidden", n_hidden_choices),
+            "n_layers": hp.choice("n_layers", n_layers_choices),
+            "dropout_rate": hp.choice("dropout_rate", [0.1, 0.3, 0.5, 0.7, 0.9])
+        },
+        "train_func_tunable_kwargs": {
+            "lr": hp.choice("lr", lr_choices)
+        }
+    }
+
+    logging.getLogger('scvi.inference.autotune').setLevel(logging.DEBUG)
+
+    best_trainer, trials = auto_tune_scvi_model(exp_key='autotune_ggc', gene_dataset=dataset,
+                                                model_class=VAE, space=space, max_evals=25,
+                                                model_specific_kwargs={'reconstruction_loss': reconstruction_loss},
+                                                train_func_specific_kwargs={'n_epochs': 150})
+
+    return best_trainer
+
+
+
 
 
 
 
 if __name__ == '__main__':
+
+
+    ####
+
+    AUTOTUNE = True
+    REC_LOSS = 'nb'
+
+    ####
 
     dataset = LogPoissonDatasetSimple(n_cells=10000)
 
@@ -123,10 +163,18 @@ if __name__ == '__main__':
     mean_lp, sigma_lp = compute_theoretical_means_cov_mat_log_poisson(mean_normal, sigma_normal)
     mean_emp, sigma_emp = compute_empirical_means_cov_mat_log_poisson(dataset.X)
 
-    # Train a model
-    nb_model = VAE(dataset.nb_genes, n_batch=dataset.n_batches, reconstruction_loss='nb')
-    trainer = UnsupervisedTrainer(nb_model, dataset)
-    trainer.train(n_epochs=150)
+    # Autotune a model
+    if AUTOTUNE:
+        trainer = autotune_fixed_loss(dataset, reconstruction_loss=REC_LOSS)
+    else:
+        nb_model = VAE(dataset.nb_genes, n_batch=dataset.n_batches, reconstruction_loss=REC_LOSS)
+        trainer = UnsupervisedTrainer(nb_model, dataset)
+        trainer.train(n_epochs=150)
+
+    #
+
+
+
 
     # Generate inference params and compute empirical covariance matrix on them (ex: rate)
     px_scale, px_r, px_rate, px_dropout = get_params_inference(trainer, dataset, posterior_type='full')
