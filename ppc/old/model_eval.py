@@ -1,6 +1,6 @@
 from scvi.inference.inference import UnsupervisedTrainer
 from scvi.dataset import CortexDataset, RetinaDataset, HematoDataset, PbmcDataset, \
-    BrainSmallDataset, ZISyntheticDatasetCorr, SyntheticDatasetCorr, LogPoissonDataset, ZILogPoissonDataset
+    BrainSmallDataset, ZISyntheticDatasetCorr, SyntheticDatasetCorr, LogPoissonDataset, ZIFALogPoissonDataset
 from scvi.dataset.synthetic import SyntheticDatasetCorrLogNormal, ZISyntheticDatasetCorrLogNormal
 from scvi.models import VAE
 
@@ -164,11 +164,6 @@ if __name__ == '__main__':
         'retina': RetinaDataset,
         'hemato': HematoDataset,
         'brain_small': BrainSmallDataset,
-        # 'nb_dataset': NBDataset,
-        # 'zinb_dataset': ZINBDataset,
-        # 'mixed_25_dataset': Mixed25Dataset,
-        # 'mixed_50_dataset': Mixed50Dataset,
-        # 'mixed_75_dataset': Mixed75Dataset,
 
         'corr_nb_dataset_800': partial(SyntheticDatasetCorr, lam_0=180, n_cells_cluster=800,
                                            weight_high=6, weight_low=3.5, n_overlap=0,
@@ -180,11 +175,11 @@ if __name__ == '__main__':
 
         'log_poisson_nb_dataset_6000': partial(LogPoissonDataset, n_cells=6000),
 
-        'log_poisson_zinb_dataset_1000': partial(ZILogPoissonDataset, n_cells=1000),
+        'log_poisson_zinb_dataset_1000': partial(ZIFALogPoissonDataset, n_cells=1000),
 
-        'log_poisson_zinb_dataset_6000': partial(ZILogPoissonDataset, n_cells=6000),
+        'log_poisson_zinb_dataset_6000': partial(ZIFALogPoissonDataset, n_cells=6000),
 
-        'log_poisson_zinb_dataset_8000': partial(ZILogPoissonDataset, n_cells=8000),
+        'log_poisson_zinb_dataset_8000': partial(ZIFALogPoissonDataset, n_cells=8000),
 
         'log_poisson_nb_dataset_8000': partial(LogPoissonDataset, n_cells=8000),
 
