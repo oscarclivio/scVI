@@ -5,7 +5,7 @@ from scvi.dataset import CortexDataset
 from scvi.inference import UnsupervisedTrainer, TrainerFish
 from scvi.inference.annotation import compute_accuracy_nn
 from scvi.inference.posterior import proximity_imputation
-from scvi.models import VAE, VAEF
+from scvi.models import VAE, VAEF, LDVAE
 
 
 def cortex_benchmark(n_epochs=250, use_cuda=True, save_path='data/', show_plot=True):
@@ -19,7 +19,7 @@ def cortex_benchmark(n_epochs=250, use_cuda=True, save_path='data/', show_plot=T
     trainer_cortex_vae.train_set.differential_expression_score(cell_idx1, cell_idx2,
                                                                genes=["THY1", "MBP"])
 
-    trainer_cortex_vae.test_set.ll()  # assert ~ 1200
+    trainer_cortex_vae.test_set.reconstruction_error()  # assert ~ 1200
     vae = VAE(cortex_dataset.nb_genes)
     trainer_cortex_vae = UnsupervisedTrainer(vae, cortex_dataset, use_cuda=use_cuda)
     trainer_cortex_vae.corrupt_posteriors()
@@ -36,7 +36,7 @@ def benchmark(dataset, n_epochs=250, use_cuda=True):
     vae = VAE(dataset.nb_genes, n_batch=dataset.n_batches)
     trainer = UnsupervisedTrainer(vae, dataset, use_cuda=use_cuda)
     trainer.train(n_epochs=n_epochs)
-    trainer.test_set.ll(verbose=True)
+    trainer.test_set.reconstruction_error(verbose=True)
     trainer.test_set.marginal_ll(verbose=True)
     return trainer
 
@@ -49,6 +49,18 @@ def harmonization_benchmarks(n_epochs=1, use_cuda=True, save_path='data/'):
 def annotation_benchmarks(n_epochs=1, use_cuda=True, save_path='data/'):
     # some cortex annotation benchmark
     pass
+
+
+def ldvae_benchmark(dataset, n_epochs, use_cuda=True):
+    ldvae = LDVAE(dataset.nb_genes, n_batch=dataset.n_batches)
+    trainer = UnsupervisedTrainer(ldvae, dataset, use_cuda=use_cuda)
+    trainer.train(n_epochs=n_epochs)
+    trainer.test_set.reconstruction_error(verbose=True)
+    trainer.test_set.marginal_ll(verbose=True)
+
+    ldvae.get_loadings()
+
+    return trainer
 
 
 def all_benchmarks(n_epochs=250, use_cuda=True, save_path='data/', show_plot=True):

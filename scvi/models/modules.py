@@ -35,6 +35,10 @@ class FCLayers(nn.Module):
         self.fc_layers = nn.Sequential(collections.OrderedDict(
             [('Layer {}'.format(i), nn.Sequential(
                 nn.Linear(n_in + sum(self.n_cat_list), n_out),
+                # Below, 0.01 and 0.001 are the default values for `momentum` and `eps` from
+                # the tensorflow implementation of batch norm; we're using those settings
+                # here too so that the results match our old tensorflow code. The default
+                # setting from pytorch would probably be fine too but we haven't tested that.
                 nn.BatchNorm1d(n_out, momentum=.01, eps=0.001) if use_batch_norm else None,
                 nn.ReLU(),
                 nn.Dropout(p=dropout_rate) if dropout_rate > 0 else None))
@@ -120,7 +124,7 @@ class Encoder(nn.Module):
         # Parameters for latent distribution
         q = self.encoder(x, *cat_list)
         q_m = self.mean_encoder(q)
-        q_v = torch.exp(self.var_encoder(q))  # (computational stability safeguard)torch.clamp(, -5, 5)
+        q_v = torch.exp(self.var_encoder(q)) + 1e-4
         latent = self.reparameterize(q_m, q_v)
         return q_m, q_v, latent
 
@@ -186,6 +190,43 @@ class DecoderSCVI(nn.Module):
         # Clamp to high value: exp(12) ~ 160000 to avoid nans (computational stability)
         px_rate = torch.exp(library) * px_scale  # torch.clamp( , max=12)
         px_r = self.px_r_decoder(px) if dispersion == "gene-cell" else None
+        return px_scale, px_r, px_rate, px_dropout
+
+
+class LinearDecoderSCVI(nn.Module):
+    def __init__(self, n_input: int, n_output: int,
+                 n_cat_list: Iterable[int] = None, n_layers: int = 1,
+                 n_hidden: int = 128):
+        super(LinearDecoderSCVI, self).__init__()
+
+        # mean gamma
+        self.n_batches = n_cat_list[0]  # Just try a simple case for now
+        if self.n_batches > 1:
+            self.batch_regressor = nn.Linear(self.n_batches - 1, n_output, bias=False)
+        else:
+            self.batch_regressor = None
+
+        self.factor_regressor = nn.Linear(n_input, n_output)
+
+        # dropout
+        self.px_dropout_decoder = nn.Linear(n_input, n_output)
+
+    def forward(self, dispersion: str, z: torch.Tensor, library: torch.Tensor,
+                *cat_list: int):
+        # The decoder returns values for the parameters of the ZINB distribution
+        p1_ = self.factor_regressor(z)
+        if self.n_batches > 1:
+            one_hot_cat = one_hot(cat_list[0], self.n_batches)[:, :-1]
+            p2_ = self.batch_regressor(one_hot_cat)
+            raw_px_scale = p1_ + p2_
+        else:
+            raw_px_scale = p1_
+
+        px_scale = torch.softmax(raw_px_scale, dim=-1)
+        px_dropout = self.px_dropout_decoder(z)
+        px_rate = torch.exp(library) * px_scale
+        px_r = None
+
         return px_scale, px_r, px_rate, px_dropout
 
 

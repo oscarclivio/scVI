@@ -6,11 +6,16 @@
 
 import numpy as np
 
-from scvi.benchmark import all_benchmarks, benchmark, benchmark_fish_scrna
+from scvi.benchmark import all_benchmarks, benchmark, benchmark_fish_scrna, ldvae_benchmark
 from scvi.dataset import BrainLargeDataset, CortexDataset, RetinaDataset, BrainSmallDataset, HematoDataset, \
     LoomDataset, AnnDataset, CsvDataset, CiteSeqDataset, CbmcDataset, PbmcDataset, SyntheticDataset, \
     SeqfishDataset, SmfishDataset, BreastCancerDataset, MouseOBDataset, \
+<<<<<<< HEAD
     GeneExpressionDataset, PurifiedPBMCDataset, SyntheticDatasetCorr, ZISyntheticDatasetCorr
+=======
+    GeneExpressionDataset, PurifiedPBMCDataset, SyntheticDatasetCorr, ZISyntheticDatasetCorr, \
+    Dataset10X
+>>>>>>> master
 from scvi.inference import JointSemiSupervisedTrainer, AlternateSemiSupervisedTrainer, ClassifierTrainer, \
     UnsupervisedTrainer, AdapterTrainer
 from scvi.inference.annotation import compute_accuracy_rf, compute_accuracy_svc
@@ -27,7 +32,7 @@ def test_cortex(save_path):
     vae = VAE(cortex_dataset.nb_genes, cortex_dataset.n_batches)
     trainer_cortex_vae = UnsupervisedTrainer(vae, cortex_dataset, train_size=0.5, use_cuda=use_cuda)
     trainer_cortex_vae.train(n_epochs=1)
-    trainer_cortex_vae.train_set.ll()
+    trainer_cortex_vae.train_set.reconstruction_error()
     trainer_cortex_vae.train_set.differential_expression_stats()
 
     trainer_cortex_vae.corrupt_posteriors(corruption='binomial')
@@ -44,7 +49,7 @@ def test_cortex(save_path):
                                                       use_cuda=use_cuda)
     trainer_cortex_svaec.train(n_epochs=1)
     trainer_cortex_svaec.labelled_set.accuracy()
-    trainer_cortex_svaec.full_dataset.ll()
+    trainer_cortex_svaec.full_dataset.reconstruction_error()
 
     svaec = SCANVI(cortex_dataset.nb_genes, cortex_dataset.n_batches, cortex_dataset.n_labels)
     trainer_cortex_svaec = AlternateSemiSupervisedTrainer(svaec, cortex_dataset,
@@ -89,10 +94,17 @@ def test_synthetic_1():
 def test_synthetic_2():
     synthetic_dataset = SyntheticDataset()
     vaec = VAEC(synthetic_dataset.nb_genes, synthetic_dataset.n_batches, synthetic_dataset.n_labels)
-    trainer_synthetic_vaec = JointSemiSupervisedTrainer(vaec, synthetic_dataset, use_cuda=use_cuda, frequency=1,
-                                                        early_stopping_kwargs={'early_stopping_metric': 'll',
-                                                                               'on': 'labelled_set',
-                                                                               'save_best_state_metric': 'll'})
+    trainer_synthetic_vaec = JointSemiSupervisedTrainer(
+        vaec,
+        synthetic_dataset,
+        use_cuda=use_cuda,
+        frequency=1,
+        early_stopping_kwargs={
+            'early_stopping_metric': 'reconstruction_error',
+            'on': 'labelled_set',
+            'save_best_state_metric': 'reconstruction_error'
+        }
+    )
     trainer_synthetic_vaec.train(n_epochs=2)
 
 
@@ -287,6 +299,13 @@ def test_classifier_accuracy(save_path):
     cls_trainer.train_set.accuracy()
 
 
+def test_LDVAE(save_path):
+    synthetic_datset_one_batch = SyntheticDataset(n_batches=1)
+    ldvae_benchmark(synthetic_datset_one_batch, n_epochs=1, use_cuda=False)
+    synthetic_datset_two_batches = SyntheticDataset(n_batches=2)
+    ldvae_benchmark(synthetic_datset_two_batches, n_epochs=1, use_cuda=False)
+
+
 def test_sampling_zl(save_path):
     cortex_dataset = CortexDataset(save_path=save_path)
     cortex_vae = VAE(cortex_dataset.nb_genes, cortex_dataset.n_batches)
@@ -298,3 +317,13 @@ def test_sampling_zl(save_path):
                                            sampling_model=cortex_vae, sampling_zl=True)
     trainer_cortex_cls.train(n_epochs=2)
     trainer_cortex_cls.test_set.accuracy()
+
+
+def test_new_10x():
+    """
+    Test new 10X data format, which is a bit different than newer ones
+    :return:
+    """
+    data = Dataset10X('pbmc_1k_v2')
+    data.subsample_genes(new_n_genes=100)
+    assert data.X.shape[1] == 100

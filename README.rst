@@ -2,15 +2,20 @@
 scVI
 ====
 
-.. image:: https://travis-ci.org/YosefLab/scVI.svg?branch=master
-    :target: https://travis-ci.org/YosefLab/scVI
+|PyPI| |bioconda| |Docs| |Build Status| |Coverage|
 
-.. image:: https://codecov.io/gh/YosefLab/scVI/branch/master/graph/badge.svg
-  :target: https://codecov.io/gh/YosefLab/scVI
-
-.. image:: https://readthedocs.org/projects/scvi/badge/?version=latest
+.. |PyPI| image:: https://img.shields.io/pypi/v/scVI.svg
+   :target: https://pypi.org/project/scvi
+.. |bioconda| image:: https://img.shields.io/badge/bioconda-blue.svg
+   :target: http://bioconda.github.io/recipes/scvi/README.html
+.. |Docs| image:: https://readthedocs.org/projects/scvi/badge/?version=latest
         :target: https://scvi.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
+.. |Build Status| image:: https://travis-ci.org/YosefLab/scVI.svg?branch=master
+    :target: https://travis-ci.org/YosefLab/scVI
+.. |Coverage| image:: https://codecov.io/gh/YosefLab/scVI/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/YosefLab/scVI
+
 
 Single-cell Variational Inference
 
@@ -21,7 +26,7 @@ Single-cell Variational Inference
 Quick Start
 -----------
 
-1. Install Python 3.6 or later. We typically use the Miniconda_ Python distribution.
+1. Install Python 3.7. We typically use the Miniconda_ Python distribution.
 
 .. _Miniconda: https://conda.io/miniconda.html
 
@@ -29,23 +34,34 @@ Quick Start
 
 .. _PyTorch: http://pytorch.org
 
-3. Install scVI through pip (``pip install scvi``). We also support conda (``conda install scvi -c bioconda`` ) but due to some packaging issues of pytorch, it will force pytorch 0.4.1. Alternatively, you may download or clone this repository and run ``python setup.py install``.
+3. Install scVI through conda:
+
+    ``conda install scvi -c bioconda -c conda-forge``
+
+   Alternatively, you may try pip (``pip install scvi``), or you may clone this repository and run ``python setup.py install``.
 
 4. Follow along with our Jupyter notebooks to quickly get familiar with scVI!
 
-   a. `data loading`__
-   b. `basic usage`__ 
-   c. `reproducing results from the scVI paper`__ 
-   d. `harmonization`__ 
-   e. `annotation`__ 
-   f. `interaction with scanpy`__ 
+   a. Getting started:
+       * `data loading`__
+       * `basic usage`__    
+   b. Analyzing several datasets:
+       * `harmonization`__ 
+       * `annotation`__ 
+   c. Advanced topics:
+       * `interaction with scanpy`__ 
+       * `linear decoder for gene interpretation`__
+       * `reproducing results from the scVI paper`__ 
+   
+
 
 .. __: https://github.com/YosefLab/scVI/tree/master/tests/notebooks/data_loading.ipynb
 .. __: https://github.com/YosefLab/scVI/tree/master/tests/notebooks/basic_tutorial.ipynb
-.. __: https://github.com/YosefLab/scVI/blob/master/tests/notebooks/scVI_reproducibility.ipynb
 .. __: https://github.com/YosefLab/scVI/blob/master/tests/notebooks/harmonization.ipynb
 .. __: https://github.com/YosefLab/scVI/blob/master/tests/notebooks/annotation.ipynb
 .. __: https://github.com/YosefLab/scVI/blob/master/tests/notebooks/scanpy_pbmc3k.ipynb
+.. __: https://github.com/YosefLab/scVI/blob/master/tests/notebooks/Linearly_decoded_VAE_for_gene_interpretation.ipynb
+.. __: https://github.com/YosefLab/scVI/blob/master/tests/notebooks/scVI_reproducibility.ipynb
 
 References
 ----------

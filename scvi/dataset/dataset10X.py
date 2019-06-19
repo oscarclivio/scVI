@@ -6,6 +6,7 @@
 import os
 import pickle
 import tarfile
+import logging
 
 import numpy as np
 import pandas as pd
@@ -35,11 +36,35 @@ available_datasets = {"1.1.0":
                        "pbmc4k",
                        "t_3k",
                        "t_4k",
-                       "neuron_9k"]}
+                       "neuron_9k"
+                       ],
+                      '3.0.0':
+                      ['pbmc_1k_protein_v3',
+                       'pbmc_10k_protein_v3',
+                       'malt_10k_protein_v3',
+                       'pbmc_1k_v2',
+                       'pbmc_1k_v3',
+                       'pbmc_10k_v3',
+                       'hgmm_1k_v2',
+                       'hgmm_1k_v3',
+                       'hgmm_5k_v3',
+                       'hgmm_10k_v3',
+                       'neuron_1k_v2',
+                       'neuron_1k_v3',
+                       'neuron_10k_v3',
+                       'heart_1k_v2',
+                       'heart_1k_v3',
+                       'heart_10k_v3'
+                       ]}
 
 to_groups = dict([(dataset_name, group)
                   for group, list_datasets in available_datasets.items()
                   for dataset_name in list_datasets])
+group_to_url_skeleton = {
+    '1.1.0': "http://cf.10xgenomics.com/samples/cell-exp/{}/{}/{}_{}_gene_bc_matrices.tar.gz",
+    '2.1.0': "http://cf.10xgenomics.com/samples/cell-exp/{}/{}/{}_{}_gene_bc_matrices.tar.gz",
+    '3.0.0': "http://cf.10xgenomics.com/samples/cell-exp/{}/{}/{}_{}_feature_bc_matrix.tar.gz"
+}
 available_specification = ['filtered', 'raw']
 
 
@@ -53,8 +78,8 @@ class Dataset10X(GeneExpressionDataset):
         :subset_genes: List of genes for subsampling. Default: ``None``.
         :dense: Whether to load as dense or sparse. Default: ``False``.
         :remote: Whether the 10X dataset is to be downloaded from the website or whether it is a local dataset, if
-        remote is False then os.path.join(save_path, filename) must be the path to the directory that contains
-        matrix.mtx and genes.tsv files
+            remote is False then os.path.join(save_path, filename) must be the path to the directory that contains
+            matrix.mtx and genes.tsv files
 
     Examples:
         >>> tenX_dataset = Dataset10X("neuron_9k")
@@ -71,8 +96,8 @@ class Dataset10X(GeneExpressionDataset):
         self.genecol = genecol
         if self.remote:
             group = to_groups[filename]
-            self.url = ("http://cf.10xgenomics.com/samples/cell-exp/%s/%s/%s_%s_gene_bc_matrices.tar.gz" %
-                        (group, filename, filename, type))
+            url_skeleton = group_to_url_skeleton[group]
+            self.url = url_skeleton.format(group, filename, filename, type)
             self.save_path = os.path.join(save_path, '10X/%s/' % filename)
             self.save_name = '%s_gene_bc_matrices' % type
             self.download_name = self.save_name + '.tar.gz'
@@ -80,7 +105,7 @@ class Dataset10X(GeneExpressionDataset):
             try:
                 assert os.path.isdir(os.path.join(self.save_path, filename))
             except AssertionError:
-                print("The file %s was not found in the location you gave" % filename)
+                logging.info("The file %s was not found in the location you gave" % filename)
                 raise
             self.save_path = os.path.join(self.save_path, filename)
 
@@ -91,33 +116,53 @@ class Dataset10X(GeneExpressionDataset):
             expression_data), gene_names=gene_names)
 
     def preprocess(self):
-        print("Preprocessing dataset")
+        logging.info("Preprocessing dataset")
         path = self.save_path
         if self.remote:
             if len(os.listdir(self.save_path)) == 1:  # nothing extracted yet
-                print("Extracting tar file")
+                logging.info("Extracting tar file")
                 tar = tarfile.open(os.path.join(self.save_path, self.download_name), "r:gz")
                 tar.extractall(path=self.save_path)
                 tar.close()
 
-            path = (os.path.join(self.save_path,
-                    [name for name in os.listdir(self.save_path) if os.path.isdir(os.path.join(self.save_path,
-                                                                                               name))][0]))
-            path = os.path.join(path, os.listdir(path)[0])
-        genes_info = pd.read_csv(os.path.join(path, 'genes.tsv'), sep='\t', header=None)
+        path, suffix = self.find_exact_path(path)
+        assert suffix in ['', '.gz']
+        if suffix == '':
+            gene_filename = 'genes.tsv'
+        else:
+            gene_filename = 'features.tsv.gz'
+        genes_info = pd.read_csv(os.path.join(path, gene_filename), sep='\t', header=None)
         gene_names = genes_info.values[:, self.genecol].astype(np.str).ravel()
-        if os.path.exists(os.path.join(path, 'barcodes.tsv')):
-            self.barcodes = pd.read_csv(os.path.join(path, 'barcodes.tsv'), sep='\t', header=None)
-        # print(genes_info)
-        # self.gene_symbols = genes_info.values[:, self.genecol].astype(np.str).ravel()
-        expression_data = io.mmread(os.path.join(path, 'matrix.mtx')).T
+        barcode_filename = 'barcodes.tsv'+suffix
+        if os.path.exists(os.path.join(path, barcode_filename)):
+            self.barcodes = pd.read_csv(os.path.join(path, barcode_filename), sep='\t', header=None)
+        matrix_filename = 'matrix.mtx'+suffix
+        expression_data = io.mmread(os.path.join(path, matrix_filename)).T
         if self.dense:
             expression_data = expression_data.A
         else:
             expression_data = csr_matrix(expression_data)
 
-        print("Finished preprocessing dataset")
+        logging.info("Finished preprocessing dataset")
         return expression_data, gene_names
+
+    @staticmethod
+    def find_exact_path(dir_path):
+        """
+        Returns exact path for files and specify if files are compressed
+        :param dir_path:
+        :return: path in which files are contains and their suffix if needed
+        """
+
+        for root, subdirs, files in os.walk(dir_path):
+            contains_mat = [filename == 'matrix.mtx' or filename == 'matrix.mtx.gz'
+                            for filename in files]
+            contains_mat = np.array(contains_mat).any()
+            if contains_mat:
+                is_tar = files[0][-3:] == '.gz'
+                suffix = '.gz' if is_tar else ''
+                return root, suffix
+        raise FileNotFoundError('10X Data was not found in Download')
 
 
 class BrainSmallDataset(Dataset10X):
