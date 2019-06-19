@@ -9,7 +9,7 @@ from matplotlib.colors import ListedColormap
 import torch
 import time
 import scipy.stats as st
-
+import os
 
 from scvi.dataset import ZIFALogPoissonDataset
 
@@ -27,6 +27,10 @@ plot_col_values = [0, 1, 2, 0, 1, 2]
 letters = ['a', 'b', 'c', 'd', 'e', 'f']
 
 cs = {}
+
+
+if not os.path.exists("results_zero_study"):
+    os.makedirs("results_zero_study")
 
 
 @torch.no_grad()
@@ -67,8 +71,8 @@ def get_params_inference(trainer, dataset, posterior_type='full', n_samples=100)
                                                              y=labels,
                                                              n_samples=n_samples)[0:3]
 
-            px_scale_list.append(px_scale.cpu().numpy().mean(axis=2))
-            px_rate_list.append(px_rate.cpu().numpy().mean(axis=2))
+            px_scale_list.append(px_scale.cpu().numpy().mean(axis=0))
+            px_rate_list.append(px_rate.cpu().numpy().mean(axis=0))
 
         return np.concatenate(px_scale_list), \
                np.concatenate(px_rate_list), None
@@ -146,8 +150,10 @@ for zifa_lambda, plot_row, plot_col, letter in zip(ZIFA_LAMBDA_VALUES, plot_row_
     rates_all = rates_all[(my_dataset.X == 0)]
     dropout_probs_all = dropout_probs_all[(my_dataset.X == 0)]
 
-    dropout_probs_biological = dropout_probs_all[biological_zeros]
-    dropout_probs_technical = dropout_probs_all[technical_zeros]
+    total_zero_probs_all = np.exp(-rates_all) + dropout_probs_all - np.exp(-rates_all)*dropout_probs_all
+
+    total_zero_probs_biological = total_zero_probs_all[biological_zeros]
+    total_zero_probs_technical = total_zero_probs_all[technical_zeros]
 
     scales_biological = scales_all[biological_zeros]
     scales_technical = scales_all[technical_zeros]
@@ -208,8 +214,8 @@ for zifa_lambda, plot_row, plot_col, letter in zip(ZIFA_LAMBDA_VALUES, plot_row_
 
 
     # All
-    density_plot(np.log10(dropout_probs_technical), np.log10(rates_technical), 'tech', ax=big_ax[plot_row, plot_col])
-    density_plot(np.log10(dropout_probs_biological), np.log10(rates_biological), 'bio', ax=big_ax[plot_row, plot_col])
+    density_plot(np.log10(total_zero_probs_technical), np.log10(rates_technical), 'tech', ax=big_ax[plot_row, plot_col])
+    density_plot(np.log10(total_zero_probs_biological), np.log10(rates_biological), 'bio', ax=big_ax[plot_row, plot_col])
     if plot_row == plot_row_values[-1]:
         big_ax[plot_row, plot_col].set_xlabel("Dropout probabilities ($\log_{10}$ scale)")
     if plot_col == 0:
@@ -219,5 +225,5 @@ for zifa_lambda, plot_row, plot_col, letter in zip(ZIFA_LAMBDA_VALUES, plot_row_
 big_fig.colorbar(cs['bio'], ax=big_ax.ravel().tolist())
 big_fig.colorbar(cs['tech'], ax=big_ax.ravel().tolist())
 
-plt.savefig("results_zero_study/datasets_all_rates_dropout_probs_all_dpi450.png", dpi=450)
+plt.savefig("results_zero_study/datasets_all_rates_total_zero_probs_all_dpi450.png", dpi=450)
 plt.close()
