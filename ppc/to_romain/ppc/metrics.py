@@ -7,7 +7,7 @@ import scipy
 
 
 class Metric:
-    def __init__(self, trainer, tag="", phi_name=None, n_sample_posterior=25, batch_size=32):
+    def __init__(self, trainer, tag="", phi_name=None, n_sample_posterior=100, batch_size=32):
         """
 
         :param trainer: scVI Trainer object instance

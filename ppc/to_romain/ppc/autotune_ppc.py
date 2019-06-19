@@ -99,12 +99,6 @@ my_space = {
     }
 }
 
-
-early_stopping_kwargs={'early_stopping_metric': "ll",
-                       'save_best_state_metric': "ll",
-                       'patience': 15,
-                       'threshold': 3}
-
 logging.getLogger('scvi.inference.autotune').setLevel(logging.DEBUG)
 
 
@@ -112,8 +106,7 @@ trials = auto_tune_scvi_model(exp_key=savefile.replace(".json", ""), gene_datase
                               space=my_space, max_evals=max_evals,
                               model_specific_kwargs={'reconstruction_loss': mode},
                               use_batches=use_batches,
-                              trainer_specific_kwargs={'kl': 1., 'early_stopping_kwargs': early_stopping_kwargs,
-                                                         'use_cuda': True},
+                              trainer_specific_kwargs={'kl': 1., 'use_cuda': True},
                               train_func_specific_kwargs={'n_epochs': 150},
                               train_best=False, parallel=parallel)
 
