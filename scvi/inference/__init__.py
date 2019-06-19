@@ -20,5 +20,8 @@ __all__ = ['Trainer',
            'JointSemiSupervisedTrainer',
            'SemiSupervisedTrainer',
            'AlternateSemiSupervisedTrainer',
-           'ClassifierTrainer'
+           'ClassifierTrainer',
+	   'auto_tune_scvi_model',
+	   'hyperopt_worker',
+	   'launch_workers',
            ]

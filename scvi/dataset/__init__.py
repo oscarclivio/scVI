@@ -3,7 +3,7 @@ from .cortex import CortexDataset
 from .dataset import GeneExpressionDataset
 from .synthetic import SyntheticDataset, SyntheticRandomDataset, SyntheticDatasetCorr, \
     ZISyntheticDatasetCorr, SyntheticDatasetCorrLogNormal, ZISyntheticDatasetCorrLogNormal, \
-    LogPoissonDataset, ZILogPoissonDataset
+    LogPoissonDataset, ZIFALogPoissonDataset, ZIFALogPoissonDataset
 from .cite_seq import CiteSeqDataset, CbmcDataset
 from .pbmc import PbmcDataset, PurifiedPBMCDataset
 from .hemato import HematoDataset
@@ -13,6 +13,7 @@ from .anndata import AnnDataset
 from .csv import CsvDataset, BreastCancerDataset, MouseOBDataset
 from .seqfish import SeqfishDataset
 from .smfish import SmfishDataset
+from .svensson import AnnDatasetKeywords, ZhengDataset, MacosDataset, KleinDataset, Sven1Dataset, Sven2Dataset
 
 __all__ = ['SyntheticDataset',
            'SyntheticRandomDataset',
@@ -27,6 +28,12 @@ __all__ = ['SyntheticDataset',
            'PbmcDataset',
            'LoomDataset',
            'AnnDataset',
+           'AnnDatasetKeywords',
+           'ZhengDataset',
+           'MacosDataset',
+           'KleinDataset',
+           'Sven1Dataset',
+           'Sven2Dataset',
            'CsvDataset',
            'Dataset10X',
            'SeqfishDataset',
@@ -39,5 +46,6 @@ __all__ = ['SyntheticDataset',
            'SyntheticDatasetCorrLogNormal',
            'ZISyntheticDatasetCorrLogNormal',
            'LogPoissonDataset',
-           'ZILogPoissonDataset'
+           'ZIFALogPoissonDataset',
+           'ZIFALogPoissonDataset',
            ]

@@ -186,15 +186,13 @@ if __name__ == '__main__':
     N_LL_MC_SAMPLES = 100
 
     if infer_param_metrics:
-        My_METRICS = [InferParamsOnZerosMetric(tag='zero_params', trainer=None, mask_zero=(MY_DATASET.X == 0))]
+        MY_METRICS = [InferParamsOnZerosMetric(tag='zero_params', trainer=None, mask_zero=(MY_DATASET.X == 0))]
     else:
         MY_METRICS = []
     MY_METRICS += [
-        InferParamsOnZerosMetric(tag='zero_params', trainer=None, mask_zero=(MY_DATASET.X == 0)),
         GeneSpecificDropoutMetric(tag='gene_dropout', trainer=None),
         LikelihoodMetric(tag='ll', trainer=None, n_mc_samples=N_LL_MC_SAMPLES),
         GeneSpecificLikelihoodMetric(tag='gene_ll', trainer=None),
-        ImputationMetric(tag='imputation', trainer=None),
         SummaryStatsMetric(tag='t_dropout', trainer=None, stat_name='ks', phi_name='dropout'),
         SummaryStatsMetric(tag='t_cv', trainer=None, stat_name='ks', phi_name='cv'),
         SummaryStatsMetric(tag='t_ratio', trainer=None, stat_name='ks', phi_name='ratio'),

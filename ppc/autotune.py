@@ -13,12 +13,12 @@ from scvi.inference import UnsupervisedTrainer
 from scvi.models.vae import VAE
 from typing import Tuple
 from functools import partial
-
-from zifa_full import VAE as VAE_zifa_full
+import numpy as np
+import time
+from scvi.dataset.svensson import ZhengDataset, MacosDataset, KleinDataset, Sven1Dataset, Sven2Dataset
 
 from scvi.dataset import CortexDataset, RetinaDataset, HematoDataset, PbmcDataset, \
-    BrainSmallDataset, SyntheticDatasetCorr, ZISyntheticDatasetCorr,\
-    SyntheticDatasetCorrLogNormal, ZISyntheticDatasetCorrLogNormal, LogPoissonDataset, ZILogPoissonDataset
+    BrainSmallDataset, ZIFALogPoissonDataset
 
 
 parser = argparse.ArgumentParser(description='Process some integers.')
@@ -28,6 +28,10 @@ parser.add_argument('--nb_genes', type=int, default=1200)
 parser.add_argument('--max_evals', type=int)
 parser.add_argument('--use_batches', default=True,
                     type=lambda x: (str(x).lower() == 'true'))
+parser.add_argument('--zifa_coef', type=float, default=0.1)
+parser.add_argument('--zifa_lambda', type=float, default=0.0001)
+
+
 args = parser.parse_args()
 
 dataset_name = args.dataset
@@ -35,6 +39,11 @@ mode = args.mode
 nb_genes = args.nb_genes
 max_evals = args.max_evals
 use_batches = args.use_batches
+zifa_coef = args.zifa_coef
+zifa_lambda = args.zifa_lambda
+
+if 'zifa' in dataset_name:
+    dataset_name += '_' + str(zifa_coef) + '_' + str(zifa_lambda)
 
 datasets_mapper = {
     'pbmc': PbmcDataset,
@@ -43,15 +52,20 @@ datasets_mapper = {
     'hemato': HematoDataset,
     'brain_small': BrainSmallDataset,
 
-    'log_poisson_nb_dataset_6000': partial(LogPoissonDataset, n_cells=6000),
+    'log_poisson_zifa_dataset_12000_' + str(zifa_coef) + '_' + str(zifa_lambda): \
+        partial(ZIFALogPoissonDataset, n_cells=12000, dropout_coef=zifa_coef, dropout_lambda=zifa_lambda),
 
-    'log_poisson_zinb_dataset_6000': partial(ZILogPoissonDataset, n_cells=6000),
+    'zheng_dataset': ZhengDataset,
 
-    'log_poisson_zinb_dataset_8000': partial(ZILogPoissonDataset, n_cells=8000),
+    'macos_dataset': MacosDataset,
 
-    'log_poisson_nb_dataset_8000': partial(LogPoissonDataset, n_cells=8000)
+    'klein_dataset': KleinDataset,
 
-    }
+    'sven1_dataset': Sven1Dataset,
+
+    'sven2_dataset': Sven2Dataset,
+
+}
 
 
 gene_dataset = datasets_mapper[dataset_name]()
@@ -59,8 +73,8 @@ gene_dataset.subsample_genes(new_n_genes=nb_genes)
 
 savefile = '{}_{}_{}_{}_results.json'.format(dataset_name, mode, nb_genes, max_evals)
 
-assert mode in ["zinb", "nb"]
-
+np.random.seed(int(time.time()))
+torch.manual_seed(int(time.time()))
 
 def compute_criterion(
     space: dict,
@@ -95,9 +109,6 @@ def compute_criterion(
     # train func
     n_epochs = n_epochs
     lr = space['lr']
-    
-    print("Space dictionary : ", space)
-    print("Use batches : ", use_batches)
 
     # Train a model
 
@@ -151,8 +162,6 @@ objective_func = partial(
 )
 
 
-# In[87]:
-
 lr_choices = [1e-2, 1e-3, 1e-4]
 n_latent_choices = list(range(3, 31))
 n_hidden_choices = [32, 64, 128, 256]
@@ -182,9 +191,6 @@ best["n_latent"] = n_latent_choices[best["n_latent"]]
 best["n_layers"] = n_layers_choices[best["n_layers"]]
 best["lr"] = lr_choices[best["lr"]]
 best["n_hidden"] = n_hidden_choices[best["n_hidden"]]
-
-print(best)
-print(trials.results)
 
 with open(savefile, 'w') as fp:
     json.dump(best, fp, sort_keys=True, indent=4)

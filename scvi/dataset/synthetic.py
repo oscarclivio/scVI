@@ -359,15 +359,16 @@ class LogPoissonDataset(GeneExpressionDataset):
 
     def mask(self, data, labels):
         return data
-    
-class ZILogPoissonDataset(LogPoissonDataset):
-    def __init__(self, dropout=0.08, **kwargs):
-        self.dropout = dropout
-        super(ZILogPoissonDataset, self).__init__(**kwargs)
+
+class ZIFALogPoissonDataset(LogPoissonDataset):
+    def __init__(self, dropout_coef=0.08, dropout_lambda=1e-3, **kwargs):
+        self.dropout_coef = dropout_coef
+        self.dropout_lambda=dropout_lambda
+        super(ZIFALogPoissonDataset, self).__init__(**kwargs)
 
     def mask(self, data, labels):
-
-        mask = np.random.binomial(1, 1 - self.dropout, data.shape).astype(bool)
+        self.dropout = self.dropout_coef * np.exp(-self.dropout_lambda * data**2)
+        mask = np.random.binomial(1, 1 - self.dropout).astype(bool)
         self.mask_zero_zi = ~mask
 
         return data * mask

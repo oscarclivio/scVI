@@ -1,7 +1,6 @@
 from scvi.inference.inference import UnsupervisedTrainer
 from scvi.dataset import CortexDataset, RetinaDataset, HematoDataset, PbmcDataset, \
-    BrainSmallDataset, ZISyntheticDatasetCorr, SyntheticDatasetCorr, LogPoissonDataset, ZIFALogPoissonDataset, \
-    ZIFALogPoissonDataset
+    BrainSmallDataset, ZISyntheticDatasetCorr, SyntheticDatasetCorr, LogPoissonDataset, ZILogPoissonDataset
 from scvi.dataset.synthetic import SyntheticDatasetCorrLogNormal, ZISyntheticDatasetCorrLogNormal
 from scvi.models import VAE
 
@@ -12,10 +11,9 @@ import os
 import pandas as pd
 from statsmodels.stats.multitest import multipletests
 from metrics import *
-from scvi.dataset.svensson import ZhengDataset, MacosDataset, KleinDataset, Sven1Dataset, Sven2Dataset
-import time
-import torch
-import numpy as np
+from zifa_full import VAE as VAE_zifa_full
+# from synthetic_data import NBDataset, ZINBDataset, Mixed25Dataset, Mixed50Dataset, Mixed75Dataset
+
 
 class ModelEval:
     def __init__(self, model_fn, dataset, metrics):
@@ -88,32 +86,53 @@ class ModelEval:
         self.res_data.to_pickle(save_path)
 
 
+def statistic_metric(subdf, stats_key=None):
+    ser = subdf[stats_key]
+    ser = ser.mean(axis=1)
+
+
+def outlier_metric(subdf, pvals_keys=None):
+    def outliers(pval_col, alpha=0.05, method='fdr_bh', use_alpha_new=True):
+        pval_col_corrected, alpha_new = multipletests(pval_col, alpha=alpha, method=method)[1:3]
+        alpha_boundary = alpha_new if use_alpha_new else alpha
+        return pval_col <= alpha_boundary
+
+    assert len(pvals_keys) == 2
+    key1, key2 = pvals_keys
+    # TODO: maybe change below
+    pvals1 = subdf[key1][:, 0]
+    pvals2 = subdf[key2][:, 0]
+    outliers1 = outliers(pvals1)
+    outliers2 = outliers(pvals2)
+
+    # TODO Verifier pas trompé
+    good1bad2 = (~outliers1) * outliers2
+    bad1good2 = outliers1 * (~outliers2)
+    return pd.Series([good1bad2.sum(), bad1good2.sum()])
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('--dataset', type=str)
     parser.add_argument('--n_experiments', type=int, default=10)
     parser.add_argument('--nb_genes', type=int, default=1200)
-    parser.add_argument('--zifa_coef', type=float, default=0.1)
-    parser.add_argument('--zifa_lambda', type=float, default=0.0001)
     parser.add_argument('--use_batches', default=True, type=lambda x: (str(x).lower() == 'true'))
-    parser.add_argument('--nb_hyperparams_json', type=str, default=None)
-    parser.add_argument('--zinb_hyperparams_json', type=str, default=None)
     parser.add_argument('--nb', default=True, type=lambda x: (str(x).lower() == 'true'))
     parser.add_argument('--zinb', default=True, type=lambda x: (str(x).lower() == 'true'))
+    parser.add_argument('--nb_hyperparams_json', type=str, default=None)
+    parser.add_argument('--zinb_hyperparams_json', type=str, default=None)
     parser.add_argument('--infer_params_metric', default=True, type=lambda x: (str(x).lower() == 'true'))
 
 
     args = parser.parse_args()
 
+    infer_params_metric = args.infer_params_metric
+    nb = args.nb
+    zinb = args.zinb
     dataset_name = args.dataset
     nb_genes = args.nb_genes
     n_experiments = args.n_experiments
     use_batches = args.use_batches
-    zifa_coef = args.zifa_coef
-    zifa_lambda = args.zifa_lambda
-    nb = args.nb
-    zinb = args.zinb
-    infer_param_metrics = args.infer_params_metric
 
 
     def read_json(json_path):
@@ -130,39 +149,8 @@ if __name__ == '__main__':
         return hyperparams, kl, lr
 
 
-    if 'zifa' in dataset_name:
-        dataset_name += '_' + str(zifa_coef) + '_' + str(zifa_lambda)
-
-
     if not os.path.exists(dataset_name):
         os.makedirs(dataset_name)
-
-    datasets_mapper = {
-        'pbmc': PbmcDataset,
-        'cortex': CortexDataset,
-        'retina': RetinaDataset,
-        'hemato': HematoDataset,
-        'brain_small': BrainSmallDataset,
-
-        'log_poisson_zifa_dataset_12000_' + str(zifa_coef) + '_' + str(zifa_lambda): \
-            partial(ZIFALogPoissonDataset, n_cells=12000, dropout_coef=zifa_coef, dropout_lambda=zifa_lambda),
-
-
-        'zheng_dataset': ZhengDataset,
-
-        'macos_dataset': MacosDataset,
-
-        'klein_dataset': KleinDataset,
-
-        'sven1_dataset': Sven1Dataset,
-
-        'sven2_dataset': Sven2Dataset,
-
-    }
-
-
-    MY_DATASET = datasets_mapper[dataset_name]()
-    MY_DATASET.subsample_genes(new_n_genes=nb_genes)
 
     nb_hyperparams, kl_nb, lr_nb = read_json(args.nb_hyperparams_json)
     zinb_hyperparams, kl_zinb, lr_zinb = read_json(args.zinb_hyperparams_json)
@@ -170,27 +158,66 @@ if __name__ == '__main__':
     print(nb_hyperparams, kl_nb, lr_nb)
     print(zinb_hyperparams, kl_zinb, lr_zinb)
 
+    datasets_mapper = {
+        'pbmc': PbmcDataset,
+        'cortex': CortexDataset,
+        'retina': RetinaDataset,
+        'hemato': HematoDataset,
+        'brain_small': BrainSmallDataset,
+        # 'nb_dataset': NBDataset,
+        # 'zinb_dataset': ZINBDataset,
+        # 'mixed_25_dataset': Mixed25Dataset,
+        # 'mixed_50_dataset': Mixed50Dataset,
+        # 'mixed_75_dataset': Mixed75Dataset,
 
+        'corr_nb_dataset_800': partial(SyntheticDatasetCorr, lam_0=180, n_cells_cluster=800,
+                                           weight_high=6, weight_low=3.5, n_overlap=0,
+                                           n_genes_high=15, n_clusters=3),
 
+        'corr_nb_dataset_2000': partial(SyntheticDatasetCorr, lam_0=180, n_cells_cluster=2000,
+                                       weight_high=6, weight_low=3.5, n_overlap=0,
+                                       n_genes_high=15, n_clusters=3),
+
+        'log_poisson_nb_dataset_6000': partial(LogPoissonDataset, n_cells=6000),
+
+        'log_poisson_zinb_dataset_1000': partial(ZILogPoissonDataset, n_cells=1000),
+
+        'log_poisson_zinb_dataset_6000': partial(ZILogPoissonDataset, n_cells=6000),
+
+        'log_poisson_zinb_dataset_8000': partial(ZILogPoissonDataset, n_cells=8000),
+
+        'log_poisson_nb_dataset_8000': partial(LogPoissonDataset, n_cells=8000),
+
+        'log_poisson_nb_dataset_10000': partial(LogPoissonDataset, n_cells=10000),
+
+        'corr_nb_dataset_2000_log_normal': partial(SyntheticDatasetCorrLogNormal, library_mu=np.log(250),
+                                                   n_cells_cluster=2000,
+                                                   weight_high=3, weight_low=1, n_overlap=0,
+                                                   n_genes_high=15, n_clusters=3),
+
+        'corr_zinb_dataset': partial(ZISyntheticDatasetCorr, lam_0=180, n_cells_cluster=2000,
+                                             weight_high=6, weight_low=3.5, n_overlap=0,
+                                             n_genes_high=15, n_clusters=3,
+                                             dropout_coef_high=0.05, dropout_coef_low=0.08,
+                                             lam_dropout_high=0., lam_dropout_low=0.),
+
+    }
 
     MY_DATASET = datasets_mapper[dataset_name]()
     MY_DATASET.subsample_genes(new_n_genes=nb_genes)
-
-    print(MY_DATASET.X.min(), MY_DATASET.X.mean(), MY_DATASET.X.max())
-    print((MY_DATASET.X == 0.).mean())
-
 
     USE_BATCHES = use_batches 
     N_EXPERIMENTS = n_experiments
     N_EPOCHS = 150
     N_LL_MC_SAMPLES = 100
 
-    if infer_param_metrics:
-        My_METRICS = [InferParamsOnZerosMetric(tag='zero_params', trainer=None, mask_zero=(MY_DATASET.X == 0))]
+
+
+    if infer_params_metric:
+        MY_METRICS = [InferParamsOnZerosMetric(tag='zero_params', trainer=None, mask_zero=(MY_DATASET.X == 0))]
     else:
         MY_METRICS = []
     MY_METRICS += [
-        InferParamsOnZerosMetric(tag='zero_params', trainer=None, mask_zero=(MY_DATASET.X == 0)),
         GeneSpecificDropoutMetric(tag='gene_dropout', trainer=None),
         LikelihoodMetric(tag='ll', trainer=None, n_mc_samples=N_LL_MC_SAMPLES),
         GeneSpecificLikelihoodMetric(tag='gene_ll', trainer=None),
@@ -211,12 +238,9 @@ if __name__ == '__main__':
     def nb_model():
         return my_model_fn('nb', hyperparams=nb_hyperparams)
 
-    np.random.seed(int(time.time()))
-    torch.manual_seed(int(time.time()))
-
     print("Use batches : ", USE_BATCHES)
 
-    if nb:
+    if nb :
         print("Working on NB")
         nb_eval = ModelEval(model_fn=nb_model, dataset=MY_DATASET, metrics=MY_METRICS)
         nb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',

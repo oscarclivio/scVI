@@ -253,8 +253,8 @@ class SummaryStatsMetric(Metric):
 
     def compute(self):
         x_gen, x_real = self.generate()
-        phi_real_gene = self.phi(x_real, axis=0)  # n_genes \times n_sim
-        phi_gen_gene = self.phi(x_gen, axis=0)
+        phi_real_gene = self.phi(x_real, axis=0)
+        phi_gen_gene = self.phi(x_gen, axis=0)  # n_genes \times n_sim
 
         if self.stat_name == 'tstat':
             # Computed for EACH gene
