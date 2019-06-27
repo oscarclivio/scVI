@@ -55,28 +55,44 @@ def find_lower_bound_eigenvalues(emp_cov, weights_mat, lmb_weights, dichotomy=Tr
         else:
             return delta_new
         n_iters += 1
-        if n_iters == n_iters_max:
-            print("Dichotomy : max iters reached")
+        #if n_iters == n_iters_max:
+        #    print("Dichotomy : max iters reached")
+
+    print("Estimated delta :", delta_min)
 
     return delta_min
 
-def soft_thresholding_operator(A, B):
-
+def soft_thresholding_operator(A, B, verbose=False):
+    if verbose:
+        print("Before soft threshold :")
+        print("Log det A :", np.linalg.slogdet(A))
+        print("Log det B :", np.linalg.slogdet(B))
+        print("Min eigenvalue A:", np.min(np.linalg.eig(A)[0]))
+        print("Min eigenvalue B:", np.min(np.linalg.eig(B)[0]))
     return np.sign(A) * np.maximum(0., A - B)
 
 def update_sigma(sigma_old, sigma_zero_new, emp_cov, weights_mat, lmb_weights, delta, lr=1e-3,
-                 lr_alt_dir=1e-1, eps=1e-4, n_iters_max = 1000, debug_force = False):
+                 lr_alt_dir=1e-1, eps=1e-4, n_iters_max = 1000, debug_force = False, verbose=False):
 
     sigma_old_inv = np.linalg.inv(sigma_old)
     sigma_zero_new_inv = np.linalg.inv(sigma_zero_new)
 
+    lr_old = lr
+    left_term_soft = sigma_old - lr * (sigma_zero_new_inv - sigma_old_inv.dot(emp_cov).dot(sigma_old_inv))
+    while np.min(np.linalg.eig(left_term_soft)[0]) < 0.:
+
+        lr = lr / 2.
+        left_term_soft = sigma_old - lr * (sigma_zero_new_inv - sigma_old_inv.dot(emp_cov).dot(sigma_old_inv))
+
+    if lr_old != lr and verbose:
+        print("The learning has been adapted : ", lr_old)
     if lr_alt_dir is None:
         lr_alt_dir = lr
 
     # First, update sigma using the simple soft-thresholding function and check if the minimal eigenvalue is
-    # greater or equal than delta
+    # greater or equal than deltathreshold_rank_deficient
 
-    left_term_soft = sigma_old - lr*(sigma_zero_new_inv - sigma_old_inv.dot(emp_cov).dot(sigma_old_inv))
+
     right_term_soft = lmb_weights * lr * weights_mat
 
     #print("Old")
@@ -86,14 +102,14 @@ def update_sigma(sigma_old, sigma_zero_new, emp_cov, weights_mat, lmb_weights, d
     #print("Right")
     #print(right_term_soft)
 
-    sigma_new = soft_thresholding_operator(left_term_soft, right_term_soft)
+    sigma_new = soft_thresholding_operator(left_term_soft, right_term_soft, verbose=verbose) #####
 
     #print("New")
     #print(sigma_new)
 
     lmb_min = np.min( np.linalg.eig(sigma_new)[0] )
 
-    print(lmb_min, delta)
+    #print(lmb_min, delta)
 
     # If the above condition is verified, return the new sigma as is, else perform
     # alternating direction method of multipliers
@@ -105,7 +121,7 @@ def update_sigma(sigma_old, sigma_zero_new, emp_cov, weights_mat, lmb_weights, d
     if lmb_min > delta:
         return sigma_new
 
-    print("Alternating direction method of multipliers has to be performed")
+    print("Alternating direction method of multipliers has to be performed : ", lmb_min, " <=", delta)
 
     Id = np.identity(sigma_old.shape[0])
     sigma_new_old = sigma_old + Id / eps
@@ -132,31 +148,43 @@ def update_sigma(sigma_old, sigma_zero_new, emp_cov, weights_mat, lmb_weights, d
         D, U = np.linalg.eig(to_diagonalize)
 
         sigma_new_new = U.dot(np.diag(np.maximum(D, delta))).dot(U.T)
-        if debug_force:
-            print("Test : ", np.min(np.linalg.eig(sigma_new_new)[0]), delta)
+        #if debug_force:
+        #    print("Test : ", np.min(np.linalg.eig(sigma_new_new)[0]), delta)
         theta_new = soft_thresholding_operator(sigma_new_new + Y_old / lr_alt_dir,
                                                lmb_weights * weights_mat / lr_alt_dir)
         Y_new = Y_old + lr_alt_dir*(sigma_new_new - theta_new)
 
         n_iters += 1
-        if n_iters >= n_iters_max:
-            print("Alt dir method : max iters reached")
+        #if n_iters >= n_iters_max:
+        #    print("Alt dir method : max iters reached")
 
-        if debug_force:
-            print("Mean diff :", np.mean(np.abs(sigma_new_new - sigma_new_old)))
+        #if debug_force:
+        #    print("Mean diff :", np.mean(np.abs(sigma_new_new - sigma_new_old)))
 
 
     sigma_new = sigma_new_new
     lmb_min = np.min(np.linalg.eig(sigma_new)[0])
-    print(lmb_min, delta)
+    print("New minimal eigenvalue :", lmb_min, ">", delta)
 
     return sigma_new
 
 
-def estimate_cov_matrix(X, weights_mat, lmb_weights, lr=1e-3,
-                        lr_alt_dir=1e-1, eps=1e-4, n_iters_max = 1000, dichotomy=True):
+def estimate_cov_matrix(X=None, weights_mat=None, lmb_weights=None, lr=1e-3, threshold_rank_deficient=1e-6,
+                        lr_alt_dir=1e-1, eps=1e-4, n_iters_max = 1000, dichotomy=True, emp_cov=None, verbose=False):
 
-    emp_cov = build_emp_cov_matrix(X)
+    if emp_cov is None:
+        emp_cov = build_emp_cov_matrix(X)
+
+    # Find lowest eigenvalue of the empirical cov matrix
+    lmb_min = np.min( np.linalg.eig(emp_cov)[0] )
+    print("Lowest eigenvalue of empirical mat :", lmb_min)
+    print("Log det of empirical mat :", np.linalg.slogdet(emp_cov))
+    lmb_min = np.real(lmb_min)
+    if lmb_min < 0.:
+        raise ValueError("Not a symmetric matrix")
+    if lmb_min < threshold_rank_deficient:
+        print("Covariance matrix has to be adjusted")
+        emp_cov = emp_cov + threshold_rank_deficient * np.identity(emp_cov.shape[0])
 
     delta = find_lower_bound_eigenvalues(emp_cov, weights_mat, lmb_weights, dichotomy=dichotomy)
 
@@ -177,26 +205,26 @@ def estimate_cov_matrix(X, weights_mat, lmb_weights, lr=1e-3,
         while np.max(np.abs(sigma_new - sigma_old)) > eps and n_iters_sigma < n_iters_max:
             sigma_old = sigma_new
             sigma_new = update_sigma(sigma_old, sigma_zero_old, emp_cov, weights_mat, lmb_weights, delta, lr=lr,
-                                     lr_alt_dir=lr_alt_dir, eps=eps, n_iters_max = n_iters_max)
+                                     lr_alt_dir=lr_alt_dir, eps=eps, n_iters_max = n_iters_max, verbose=verbose)
             n_iters_sigma += 1
-            if n_iters_sigma >= n_iters_max:
-                print("Sigma : max iters reached")
-            else:
-                print("Iters sigma :", n_iters_sigma)
-                print("Diff sigma : ", np.max(np.abs(sigma_new - sigma_old)))
+            #if n_iters_sigma >= n_iters_max:
+            #    print("Sigma : max iters reached")
+            #else:
+            #    print("Iters sigma :", n_iters_sigma)
+            #    print("Diff sigma : ", np.max(np.abs(sigma_new - sigma_old)))
 
 
         sigma_zero_new = sigma_new
 
         n_iters_zero += 1
-        if n_iters_zero >= n_iters_max:
-            print("Sigma zero : max iters reached")
-        else:
-            print("Current iter zero:", n_iters_zero)
-            print("Diff zero:", np.max(np.abs(sigma_zero_new - sigma_zero_old)))
-            print(sigma_zero_new)
+        #if n_iters_zero >= n_iters_max:
+        #    print("Sigma zero : max iters reached")
+        #else:
+        #    print("Current iter zero:", n_iters_zero)
+        #    print("Diff zero:", np.max(np.abs(sigma_zero_new - sigma_zero_old)))
+        #    print(sigma_zero_new)
 
-    print(n_iters_sigma, n_iters_zero)
+    #print(n_iters_sigma, n_iters_zero)
 
     return sigma_zero_new
 
