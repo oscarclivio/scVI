@@ -191,6 +191,9 @@ class LogPoissonDatasetGeneral(GeneExpressionDataset):
         assert(len(pi) == len(mus))
         assert(len(pi) == len(sigmas))
 
+        torch.manual_seed(0)
+        np.random.seed(0)
+
         n_classes = len(pi)
 
         assert(mus[0].size(0) == sigmas[0].size(0))

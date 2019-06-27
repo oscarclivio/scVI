@@ -18,6 +18,8 @@ from scvi.models.vae import VAE
 from typing import Tuple
 from functools import partial
 import logging
+import os
+import pickle
 
 from scvi.dataset import LogPoissonDatasetGeneral
 
@@ -52,11 +54,12 @@ def compute_theoretical_means_cov_mat_log_poisson(mean_normal, sigma_normal):
     return mean_lp, sigma_lp
 
 
-def compute_empirical_means_cov_mat_log_poisson(X):
+def compute_empirical_means_cov_mat(X):
 
     mean_emp = np.mean(X, axis=0)
-    mean_emp_unsq = mean_emp.reshape(1, mean_emp.size)
-    sigma_emp = (X - mean_emp_unsq).T.dot(X - mean_emp_unsq) / (X.shape[0] - 1)
+    #mean_emp_unsq = mean_emp.reshape(1, mean_emp.size)
+    #sigma_emp = (X - mean_emp_unsq).T.dot(X - mean_emp_unsq) / (X.shape[0] - 1)
+    sigma_emp = np.cov(X.T)
 
     return mean_emp, sigma_emp
 
@@ -82,14 +85,23 @@ def get_params_inference(trainer, dataset, posterior_type='full', n_samples=1):
     if trainer.model.reconstruction_loss == 'zinb':
         px_scale_list, px_r_list, px_rate_list, px_dropout_list = [], [], [], []
         for tensors in posterior:
-            sample_batch, _, _, batch_index, labels = tensors
+            sample_batch, local_l_mean, local_l_var, batch_index, labels = tensors
             px_scale, px_r, px_rate, px_dropout = posterior.model.inference(sample_batch,
                                                                             batch_index=batch_index,
                                                                             y=labels,
-                                                                            n_samples=n_samples)[0:4]
+                                                                            n_samples=n_samples,
+                                                                            sample_mode='prior',
+                                                                            local_l_mean=local_l_mean,
+                                                                            local_l_var=local_l_var)[0:4]
+
+            p = (px_rate / (px_rate + px_r)).cpu()
+            r = px_r.cpu()
+
+            l_train = np.random.gamma(r, p / (1 - p))
+
             px_scale_list.append(px_scale.cpu().numpy())
             px_r_list.append(px_r.cpu().numpy())
-            px_rate_list.append(px_rate.cpu().numpy())
+            px_rate_list.append(l_train.cpu().numpy())
             px_dropout_list.append(px_dropout.cpu().numpy())
 
         return np.concatenate(px_scale_list), np.concatenate(px_r_list),\
@@ -110,7 +122,21 @@ def get_params_inference(trainer, dataset, posterior_type='full', n_samples=1):
         return np.concatenate(px_scale_list), np.concatenate(px_r_list), \
                np.concatenate(px_rate_list), None
 
-def autotune_fixed_loss(dataset, reconstruction_loss='nb'):
+def autotune_fixed_loss(dataset,
+                        dataset_name='dataset',
+                        vae_model=VAE,
+                        vae_name = 'scvi',
+                        reconstruction_loss='nb',
+                        force_autotune=True,
+                        max_evals=100):
+
+    exp_name = vae_name + '_' + reconstruction_loss + '_' + dataset_name
+
+
+    if not(force_autotune) and os.path.isfile('best_trainer_' + exp_name) and os.path.isfile('trials' + exp_name):
+        best_trainer = pickle.load(open('best_trainer_' + exp_name, "rb" ))
+        trials = pickle.load(open('trials_' + exp_name, "rb"))
+        return best_trainer, trials
 
     lr_choices = [1e-2, 1e-3, 1e-4]
     n_latent_choices = list(range(3, 31))
@@ -131,12 +157,14 @@ def autotune_fixed_loss(dataset, reconstruction_loss='nb'):
 
     logging.getLogger('scvi.inference.autotune').setLevel(logging.DEBUG)
 
-    best_trainer, trials = auto_tune_scvi_model(exp_key='autotune_ggc', gene_dataset=dataset,
-                                                model_class=VAE, space=space, max_evals=25,
+
+    best_trainer, trials = auto_tune_scvi_model(exp_key=exp_name, gene_dataset=dataset,
+                                                model_class=vae_model, space=space, max_evals=max_evals,
                                                 model_specific_kwargs={'reconstruction_loss': reconstruction_loss},
+                                                trainer_specific_kwargs={'kl': 1.},
                                                 train_func_specific_kwargs={'n_epochs': 150})
 
-    return best_trainer
+    return best_trainer, trials
 
 
 
@@ -161,7 +189,7 @@ if __name__ == '__main__':
     sigma_normal = dataset.sigma_gt
 
     mean_lp, sigma_lp = compute_theoretical_means_cov_mat_log_poisson(mean_normal, sigma_normal)
-    mean_emp, sigma_emp = compute_empirical_means_cov_mat_log_poisson(dataset.X)
+    mean_emp, sigma_emp = compute_empirical_means_cov_mat(dataset.X)
 
     # Autotune a model
     if AUTOTUNE:
@@ -178,7 +206,7 @@ if __name__ == '__main__':
 
     # Generate inference params and compute empirical covariance matrix on them (ex: rate)
     px_scale, px_r, px_rate, px_dropout = get_params_inference(trainer, dataset, posterior_type='full')
-    mean_emp_rate, sigma_emp_rate = compute_empirical_means_cov_mat_log_poisson(px_rate)
+    mean_emp_rate, sigma_emp_rate = compute_empirical_means_cov_mat(px_rate)
 
     # View results
     #print(mean_normal)

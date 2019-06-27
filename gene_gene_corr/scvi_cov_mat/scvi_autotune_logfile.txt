@@ -1554,3 +1554,221 @@ Finished training
 Pickling best model, trainer as well as Trials object
 [2019-05-23 18:09:07,115 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
 Cleaning up: removing added logging handler
+[2019-06-12 00:07:01,554 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Starting experiment: scvi_nb_dataset
+[2019-06-12 00:07:01,554 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Adding default early stopping behaviour.
+[2019-06-12 00:07:01,554 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Fixed parameters: 
+model: 
+{'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}}
+train method: 
+{'n_epochs': 150}
+[2019-06-12 00:07:01,554 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Starting sequential hyperoptimization
+[2019-06-12 00:07:01,641 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Parameters being tested: 
+model: 
+{'dropout_rate': 0.3, 'n_hidden': 32, 'n_latent': 18, 'n_layers': 2, 'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}, 'use_cuda': True, 'show_progbar': False, 'frequency': 1}
+train method: 
+{'lr': 0.01, 'n_epochs': 150}
+[2019-06-12 00:07:01,641 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating model
+[2019-06-12 00:07:01,644 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating trainer
+[2019-06-12 00:07:03,613 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Starting training
+[2019-06-12 00:32:27,582 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Starting experiment: scvi_nb_dataset
+[2019-06-12 00:32:27,582 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Adding default early stopping behaviour.
+[2019-06-12 00:32:27,582 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Fixed parameters: 
+model: 
+{'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}}
+train method: 
+{'n_epochs': 150}
+[2019-06-12 00:32:27,582 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Starting sequential hyperoptimization
+[2019-06-12 00:32:27,631 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Parameters being tested: 
+model: 
+{'dropout_rate': 0.5, 'n_hidden': 256, 'n_latent': 7, 'n_layers': 2, 'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}, 'use_cuda': True, 'show_progbar': False, 'frequency': 1}
+train method: 
+{'lr': 0.0001, 'n_epochs': 150}
+[2019-06-12 00:32:27,631 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating model
+[2019-06-12 00:32:27,635 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating trainer
+[2019-06-12 00:32:29,606 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Starting training
+[2019-06-12 00:33:28,606 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Finished training
+[2019-06-12 00:33:28,608 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Training of 103 epochs finished in 0:01:00.981380
+[2019-06-12 00:33:28,619 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Parameters being tested: 
+model: 
+{'dropout_rate': 0.5, 'n_hidden': 128, 'n_latent': 14, 'n_layers': 2, 'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}, 'use_cuda': True, 'show_progbar': False, 'frequency': 1}
+train method: 
+{'lr': 0.001, 'n_epochs': 150}
+[2019-06-12 00:33:28,619 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating model
+[2019-06-12 00:33:28,630 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating trainer
+[2019-06-12 00:33:28,634 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Starting training
+[2019-06-12 00:34:24,527 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Finished training
+[2019-06-12 00:34:24,528 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Training of 103 epochs finished in 0:00:55.909020
+[2019-06-12 00:34:24,532 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Parameters being tested: 
+model: 
+{'dropout_rate': 0.7, 'n_hidden': 128, 'n_latent': 9, 'n_layers': 5, 'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}, 'use_cuda': True, 'show_progbar': False, 'frequency': 1}
+train method: 
+{'lr': 0.01, 'n_epochs': 150}
+[2019-06-12 00:34:24,533 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating model
+[2019-06-12 00:34:24,536 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating trainer
+[2019-06-12 00:34:24,539 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Starting training
+[2019-06-12 00:35:49,601 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Finished training
+[2019-06-12 00:35:49,602 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Training of 103 epochs finished in 0:01:25.069577
+[2019-06-12 00:35:49,607 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Parameters being tested: 
+model: 
+{'dropout_rate': 0.3, 'n_hidden': 64, 'n_latent': 3, 'n_layers': 1, 'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}, 'use_cuda': True, 'show_progbar': False, 'frequency': 1}
+train method: 
+{'lr': 0.001, 'n_epochs': 150}
+[2019-06-12 00:35:49,607 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating model
+[2019-06-12 00:35:49,608 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating trainer
+[2019-06-12 00:35:49,610 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Starting training
+[2019-06-12 00:36:37,759 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Finished training
+[2019-06-12 00:36:37,759 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Training of 103 epochs finished in 0:00:48.152885
+[2019-06-12 00:36:37,763 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Parameters being tested: 
+model: 
+{'dropout_rate': 0.1, 'n_hidden': 128, 'n_latent': 15, 'n_layers': 3, 'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}, 'use_cuda': True, 'show_progbar': False, 'frequency': 1}
+train method: 
+{'lr': 0.01, 'n_epochs': 150}
+[2019-06-12 00:36:37,763 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating model
+[2019-06-12 00:36:37,766 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating trainer
+[2019-06-12 00:36:37,768 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Starting training
+[2019-06-12 00:37:42,911 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Finished training
+[2019-06-12 00:37:42,912 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Training of 103 epochs finished in 0:01:05.148376
+[2019-06-12 00:37:42,916 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Parameters being tested: 
+model: 
+{'dropout_rate': 0.7, 'n_hidden': 256, 'n_latent': 30, 'n_layers': 3, 'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}, 'use_cuda': True, 'show_progbar': False, 'frequency': 1}
+train method: 
+{'lr': 0.001, 'n_epochs': 150}
+[2019-06-12 00:37:42,917 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating model
+[2019-06-12 00:37:42,921 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating trainer
+[2019-06-12 00:37:42,923 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Starting training
+[2019-06-12 00:38:51,696 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Finished training
+[2019-06-12 00:38:51,697 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Training of 103 epochs finished in 0:01:08.780546
+[2019-06-12 00:38:51,701 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Parameters being tested: 
+model: 
+{'dropout_rate': 0.9, 'n_hidden': 32, 'n_latent': 15, 'n_layers': 3, 'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}, 'use_cuda': True, 'show_progbar': False, 'frequency': 1}
+train method: 
+{'lr': 0.01, 'n_epochs': 150}
+[2019-06-12 00:38:51,701 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating model
+[2019-06-12 00:38:51,703 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating trainer
+[2019-06-12 00:38:51,705 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Starting training
+[2019-06-12 00:40:09,549 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Finished training
+[2019-06-12 00:40:09,550 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Training of 103 epochs finished in 0:01:17.849401
+[2019-06-12 00:40:09,555 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Parameters being tested: 
+model: 
+{'dropout_rate': 0.3, 'n_hidden': 32, 'n_latent': 27, 'n_layers': 5, 'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}, 'use_cuda': True, 'show_progbar': False, 'frequency': 1}
+train method: 
+{'lr': 0.001, 'n_epochs': 150}
+[2019-06-12 00:40:09,555 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating model
+[2019-06-12 00:40:09,559 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating trainer
+[2019-06-12 00:40:09,569 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Starting training
+[2019-06-12 00:41:44,814 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Finished training
+[2019-06-12 00:41:44,815 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Training of 103 epochs finished in 0:01:35.259383
+[2019-06-12 00:41:44,819 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Parameters being tested: 
+model: 
+{'dropout_rate': 0.7, 'n_hidden': 256, 'n_latent': 27, 'n_layers': 3, 'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}, 'use_cuda': True, 'show_progbar': False, 'frequency': 1}
+train method: 
+{'lr': 0.001, 'n_epochs': 150}
+[2019-06-12 00:41:44,819 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating model
+[2019-06-12 00:41:44,823 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating trainer
+[2019-06-12 00:41:44,829 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Starting training
+[2019-06-12 00:42:55,836 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Finished training
+[2019-06-12 00:42:55,837 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Training of 103 epochs finished in 0:01:11.017670
+[2019-06-12 00:42:55,841 - MainProcess - MainThread] INFO - scvi.inference.autotune
+Parameters being tested: 
+model: 
+{'dropout_rate': 0.1, 'n_hidden': 32, 'n_latent': 18, 'n_layers': 5, 'reconstruction_loss': 'nb'}
+trainer: 
+{'kl': 1.0, 'early_stopping_kwargs': {'early_stopping_metric': 'll', 'save_best_state_metric': 'll', 'patience': 50, 'threshold': 3}, 'use_cuda': True, 'show_progbar': False, 'frequency': 1}
+train method: 
+{'lr': 0.001, 'n_epochs': 150}
+[2019-06-12 00:42:55,841 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating model
+[2019-06-12 00:42:55,844 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Instantiating trainer
+[2019-06-12 00:42:55,846 - MainProcess - MainThread] DEBUG - scvi.inference.autotune
+Starting training
