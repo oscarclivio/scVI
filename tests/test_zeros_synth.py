@@ -27,6 +27,7 @@ def test_enough_zeros():
 
     print(nb_data.X.shape)
     print(nb_data.exprs_param.min(), nb_data.exprs_param.max())
+
     is_technical_mask = nb_data.is_technical.squeeze()
     nb_data_zeros = nb_data.X == 0
     tech_zeros = nb_data_zeros[is_technical_mask].sum()
@@ -76,6 +77,7 @@ def test_model_fit(model_fit: bool):
                                     indices=np.arange(len(synth_data)))
 
     # Step 3: Inference
+
     poisson_params = []
     p_dropout_infered = []
     latent_reps = []
@@ -89,6 +91,7 @@ def test_model_fit(model_fit: bool):
                 sample_batch, batch_index)
             p_zero = 1.0 / (1.0 + torch.exp(-px_dropout))
             p_dropout_infered.append(p_zero.cpu().numpy())
+
 
             l_train_batch = torch.zeros((sample_batch.size(0), sample_batch.size(1), n_mc_sim_total),
                                         device=sample_batch.device)
@@ -129,6 +132,7 @@ def test_model_fit(model_fit: bool):
     fig, axes = plt.subplots(ncols=2, nrows=2, figsize=(10, 10))
     sns.heatmap(p_dropout_infered_all, vmin=vmin, vmax=vmax, ax=axes[0, 1])
     axes[0, 1].set_title('Dropout Rate Predicted')
+
     sns.heatmap(p_dropout_gt, vmin=vmin, vmax=vmax, ax=axes[0, 0])
     axes[0, 0].set_title('Dropout Rate GT')
 
@@ -136,11 +140,13 @@ def test_model_fit(model_fit: bool):
     poisson_params = np.concatenate(poisson_params)
     vmin = min(poisson_params_gt.min(), poisson_params.min())
     vmax = max(poisson_params_gt.max(), poisson_params.max())
+
     sns.heatmap(poisson_params, vmin=vmin, vmax=vmax, ax=axes[1, 1])
     axes[1, 1].set_title('Poisson Distribution Parameter Predicted')
 
     sns.heatmap(poisson_params_gt,  vmin=vmin, vmax=vmax, ax=axes[1, 0])
     axes[1, 0].set_title('Poisson Distribution Parameter GT')
+
     plt.savefig(os.path.join(folder, 'params_comparison.png'))
     plt.close()
 

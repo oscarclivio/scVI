@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 class Trainer:
     r"""The abstract Trainer class for training a PyTorch model and monitoring its statistics. It should be
     inherited at least with a .loss() function to be optimized in the training loop.
-
     Args:
         :model: A model instance from class ``VAE``, ``VAEC``, ``SCANVI``
         :gene_dataset: A gene_dataset instance like ``CortexDataset()``

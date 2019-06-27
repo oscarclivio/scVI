@@ -505,39 +505,57 @@ class Posterior:
         return imputed_list.squeeze()
 
     @torch.no_grad()
-    def generate(self, n_samples=100, genes=None):  # with n_samples>1 return original list/ otherwose sequential
-        """
+    def generate(self, n_samples=100, genes=None, zero_inflated=False, batch_size=128):
+        '''
         Return original_values as y and generated as x (for posterior density visualization)
         :param n_samples:
         :param genes:
         :return:
-        """
-        original_list = []
-        posterior_list = []
-        batch_size = 128  # max(self.data_loader_kwargs["batch_size"] // n_samples, 2)  # Reduce batch_size on GPU
-        for tensors in self.update({"batch_size": batch_size}):
-            sample_batch, _, _, batch_index, labels = tensors
-            px_dispersion, px_rate = self.model.inference(sample_batch, batch_index=batch_index, y=labels,
-                                                          n_samples=n_samples)[1:3]
-            # This gamma is really l*w using scVI manuscript notation
-            p = (px_rate / (px_rate + px_dispersion)).cpu()
-            r = px_dispersion.cpu()
-            l_train = np.random.gamma(r, p / (1 - p))
-            X = np.random.poisson(l_train)
-            # """
-            # In numpy (shape, scale) => (concentration, rate), with scale = p /(1 - p)
-            # rate = (1 - p) / p  # = 1/scale # used in pytorch
-            # """
-            original_list += [np.array(sample_batch.cpu())]
-            posterior_list += [X]
+        '''
 
-            if genes is not None:
-                posterior_list[-1] = posterior_list[-1][:, :, self.gene_dataset._gene_idx(genes)]
-                original_list[-1] = original_list[-1][:, self.gene_dataset._gene_idx(genes)]
+        posterior = np.zeros((1, 1, 1))
 
-            posterior_list[-1] = np.transpose(posterior_list[-1], (1, 2, 0))
+        while (posterior.mean(axis=0) == 0.).sum() > 0.:
 
-        return np.concatenate(posterior_list, axis=0), np.concatenate(original_list, axis=0)
+            original_list = []
+            posterior_list = []
+
+            for tensors in self.update({"batch_size": batch_size}):
+                sample_batch, _, _, batch_index, labels = tensors
+                px_dispersion, px_rate, px_dropout = self.model.inference(sample_batch,
+                                                                          batch_index=batch_index,
+                                                                          y=labels,
+                                                                          n_samples=n_samples)[1:4]
+
+                p = px_rate / (px_rate + px_dispersion)
+                r = px_dispersion
+                l_train = torch.distributions.Gamma(concentration=r, rate=(1-p)/p).sample()
+                l_train = torch.clamp(l_train, max=1e18)
+
+                X = torch.distributions.Poisson(l_train).sample().cpu().numpy()
+
+
+                if zero_inflated:
+
+                    p_zero = 1.0 / (1.0 + torch.exp(-px_dropout))
+                    p_zero = p_zero.cpu().numpy()
+                    random_prob = np.random.random(p_zero.shape)
+                    X[random_prob <= p_zero] = 0
+
+                original_list += [np.array(sample_batch.cpu())]
+                posterior_list += [X]  # [np.array(posterior.cpu())]##
+
+                if genes is not None:
+                    posterior_list[-1] = posterior_list[-1][:, :, self.gene_dataset._gene_idx(genes)]
+                    original_list[-1] = original_list[-1][:, self.gene_dataset._gene_idx(genes)]
+
+                posterior_list[-1] = np.transpose(posterior_list[-1], (1, 2, 0))
+
+            posterior = np.concatenate(posterior_list, axis=0)
+            original = np.concatenate(original_list, axis=0)
+
+
+        return posterior, original
 
     @torch.no_grad()
     def generate_parameters(self):
@@ -646,8 +664,9 @@ class Posterior:
         if verbose:
             logging.info("\nMedian of Median: %.4f\nMean of Median for each cell: %.4f" % (median_score, mean_score))
 
-        plot_imputation(np.concatenate(original_list), np.concatenate(imputed_list), show_plot=show_plot,
-                        title=os.path.join(save_path, title_plot))
+        if show_plot:
+            plot_imputation(np.concatenate(original_list), np.concatenate(imputed_list), show_plot=show_plot,
+                            title=os.path.join(save_path, title_plot))
         return original_list, imputed_list
 
     @torch.no_grad()

@@ -13,6 +13,7 @@ from .annotation import (
 from .fish import TrainerFish
 from .autotune import auto_tune_scvi_model, hyperopt_worker, launch_workers
 
+
 __all__ = [
     'Trainer',
     'Posterior',
