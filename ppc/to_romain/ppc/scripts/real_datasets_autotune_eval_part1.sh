@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+
 python ../autotune_ppc.py --mode zinb --dataset cortex --nb_genes 1200 --max_evals 100
 python ../autotune_ppc.py --mode nb --dataset cortex --nb_genes 1200 --max_evals 100
 python ../model_eval.py --dataset cortex --n_experiments 100 --nb_genes 1200  \

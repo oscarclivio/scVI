@@ -83,7 +83,7 @@ for zifa_lambda, plot_row, plot_col, letter in zip(ZIFA_LAMBDA_VALUES, plot_row_
     if 'zifa' in dataset_name:
         dataset_name += '_' + str(ZIFA_COEF) + '_' + str(zifa_lambda)
 
-    zinb_hyperparameters_json = 'scripts/' + dataset_name + '_zinb_1200_50_results.json'
+    zinb_hyperparameters_json = 'scripts/' + dataset_name + '_zinb_1200_100_results.json'
 
 
     ## Get the full mask whether a zero is biological or technical
@@ -131,12 +131,16 @@ for zifa_lambda, plot_row, plot_col, letter in zip(ZIFA_LAMBDA_VALUES, plot_row_
     # Train model
 
     trainer = UnsupervisedTrainer(model, my_dataset, train_size=0.8, frequency=1,
-                                  early_stopping_kwargs={
-                                       'early_stopping_metric': 'll',
-                                       # 'save_best_state_metric': 'll',
-                                       'patience': 15,
-                                       'threshold': 3},
-                                  kl=kl_zinb)
+                                   early_stopping_kwargs = {
+                                                "early_stopping_metric": "elbo",
+                                                "save_best_state_metric": "elbo",
+                                                "patience": 15,
+                                                "threshold": 3,
+                                                "reduce_lr_on_plateau": True,
+                                                "lr_patience": 15,
+                                                "lr_factor": 0.5,
+                                            },
+                                   kl=kl_zinb)
     trainer.train(n_epochs=150, lr=lr_zinb)
 
     # Sample 100 posteriors, retrieve average dropout, scale and rate

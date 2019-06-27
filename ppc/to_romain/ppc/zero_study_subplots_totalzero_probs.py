@@ -83,7 +83,7 @@ for zifa_lambda, plot_row, plot_col, letter in zip(ZIFA_LAMBDA_VALUES, plot_row_
     if 'zifa' in dataset_name:
         dataset_name += '_' + str(ZIFA_COEF) + '_' + str(zifa_lambda)
 
-    zinb_hyperparameters_json = 'scripts/' + dataset_name + '_zinb_1200_50_results.json'
+    zinb_hyperparameters_json = 'scripts/' + dataset_name + '_zinb_1200_100_results.json'
 
 
     ## Get the full mask whether a zero is biological or technical
@@ -131,12 +131,16 @@ for zifa_lambda, plot_row, plot_col, letter in zip(ZIFA_LAMBDA_VALUES, plot_row_
     # Train model
 
     trainer = UnsupervisedTrainer(model, my_dataset, train_size=0.8, frequency=1,
-                                  early_stopping_kwargs={
-                                       'early_stopping_metric': 'll',
-                                       # 'save_best_state_metric': 'll',
-                                       'patience': 15,
-                                       'threshold': 3},
-                                  kl=kl_zinb)
+                                   early_stopping_kwargs = {
+                                                "early_stopping_metric": "elbo",
+                                                "save_best_state_metric": "elbo",
+                                                "patience": 15,
+                                                "threshold": 3,
+                                                "reduce_lr_on_plateau": True,
+                                                "lr_patience": 15,
+                                                "lr_factor": 0.5,
+                                            },
+                                   kl=kl_zinb)
     trainer.train(n_epochs=150, lr=lr_zinb)
 
     # Sample 100 posteriors, retrieve average dropout, scale and rate
@@ -217,7 +221,7 @@ for zifa_lambda, plot_row, plot_col, letter in zip(ZIFA_LAMBDA_VALUES, plot_row_
     density_plot(np.log10(total_zero_probs_technical), np.log10(rates_technical), 'tech', ax=big_ax[plot_row, plot_col])
     density_plot(np.log10(total_zero_probs_biological), np.log10(rates_biological), 'bio', ax=big_ax[plot_row, plot_col])
     if plot_row == plot_row_values[-1]:
-        big_ax[plot_row, plot_col].set_xlabel("Dropout probabilities ($\log_{10}$ scale)")
+        big_ax[plot_row, plot_col].set_xlabel("Total zero probabilities ($\log_{10}$ scale)")
     if plot_col == 0:
         big_ax[plot_row, plot_col].set_ylabel("NB means ($\log_{10}$ scale)")
     big_ax[plot_row, plot_col].set_title("$\lambda = {val}$ ({letter})".format(val=zifa_lambda, letter=letter))

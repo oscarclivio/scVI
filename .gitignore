@@ -1,3 +1,6 @@
+# Old simulations
+ppc/to_romain/ppc/scripts/old_*
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -118,4 +121,3 @@ ENV/
 
 
 /data
->>>>>>> Stashed changes

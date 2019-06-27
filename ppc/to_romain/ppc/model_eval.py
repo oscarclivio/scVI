@@ -35,15 +35,15 @@ class ModelEval:
         model = self.model_fn()
         self.trainer = UnsupervisedTrainer(model, self.dataset,
                                            train_size=0.8, frequency=1,
-                                           early_stopping_kwargs= {
-                                                            "early_stopping_metric": "elbo",
-                                                            "save_best_state_metric": "elbo",
-                                                            "patience": 50,
-                                                            "threshold": 0,
-                                                            "reduce_lr_on_plateau": True,
-                                                            "lr_patience": 25,
-                                                            "lr_factor": 0.2,
-                                                        },
+                                           early_stopping_kwargs = {
+                                                        "early_stopping_metric": "elbo",
+                                                        "save_best_state_metric": "elbo",
+                                                        "patience": 15,
+                                                        "threshold": 3,
+                                                        "reduce_lr_on_plateau": True,
+                                                        "lr_patience": 15,
+                                                        "lr_factor": 0.5,
+                                                    },
                                            **kwargs)
         self.trainer.train(n_epochs, lr=lr)
 

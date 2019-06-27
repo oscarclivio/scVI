@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 # 1e-3
-python ../autotune_ppc.py --mode zinb --dataset log_poisson_zifa_dataset_12000 --nb_genes 1200 --max_evals 100 \
-    --zifa_coef 0.08 --zifa_lambda 0.001
-python ../autotune_ppc.py --mode nb --dataset log_poisson_zifa_dataset_12000 --nb_genes 1200 --max_evals 100 \
-    --zifa_coef 0.08 --zifa_lambda 0.001
+#python ../autotune_ppc.py --mode zinb --dataset log_poisson_zifa_dataset_12000 --nb_genes 1200 --max_evals 100 \
+#    --zifa_coef 0.08 --zifa_lambda 0.001
+#python ../autotune_ppc.py --mode nb --dataset log_poisson_zifa_dataset_12000 --nb_genes 1200 --max_evals 100 \
+#    --zifa_coef 0.08 --zifa_lambda 0.001
 python ../model_eval.py --dataset log_poisson_zifa_dataset_12000 --n_experiments 100 \
     --zifa_coef 0.08 --zifa_lambda 0.001 \
     --zinb_hyperparams_json log_poisson_zifa_dataset_12000_0.08_0.001_zinb_1200_100_results.json \
