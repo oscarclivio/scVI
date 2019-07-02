@@ -15,7 +15,8 @@ from typing import Tuple
 from functools import partial
 import numpy as np
 import time
-from scvi.dataset.svensson import ZhengDataset, MacosDataset, KleinDataset, Sven1Dataset, Sven2Dataset
+from scvi.dataset.svensson import ZhengDataset, MacosDataset, KleinDataset, Sven1Dataset, Sven2Dataset, \
+    ZhengDatasetRandom, MacosDatasetRandom, KleinDatasetRandom, Sven1DatasetRandom, Sven2DatasetRandom
 from scvi.inference.autotune import auto_tune_scvi_model
 import logging
 
@@ -71,6 +72,28 @@ datasets_mapper = {
 
     'sven2_dataset': Sven2Dataset,
 
+    'zheng_dataset_random': partial(ZhengDatasetRandom, n_genes_random=100, seed=1),
+
+    'macos_dataset_random': partial(MacosDatasetRandom, n_genes_random=100, seed=0),
+
+    'klein_dataset_random': partial(KleinDatasetRandom, n_genes_random=100, seed=0),
+
+    'klein_dataset_random97': partial(KleinDatasetRandom, n_genes_random=100, seed=97),
+
+    'klein_dataset_random47': partial(KleinDatasetRandom, n_genes_random=100, seed=47),
+
+    'sven1_dataset_random': partial(Sven1DatasetRandom, n_genes_random=100, seed=0),
+
+    'sven2_dataset_random': partial(Sven2DatasetRandom, n_genes_random=100, seed=0),
+
+    'sven1_dataset_random97': partial(Sven1DatasetRandom, n_genes_random=100, seed=97),
+
+    'sven2_dataset_random97': partial(Sven2DatasetRandom, n_genes_random=100, seed=97),
+
+    'sven1_dataset_random47': partial(Sven1DatasetRandom, n_genes_random=100, seed=47),
+
+    'sven2_dataset_random47': partial(Sven2DatasetRandom, n_genes_random=100, seed=47),
+
 }
 
 
@@ -116,7 +139,7 @@ trials = auto_tune_scvi_model(exp_key=savefile.replace(".json", ""), gene_datase
                               model_specific_kwargs={'reconstruction_loss': mode},
                               use_batches=use_batches,
                               trainer_specific_kwargs={'early_stopping_kwargs': early_stopping_kwargs,
-                                                       'kl': 1., 'use_cuda': True},
+                                                       'n_epochs_kl_warmup': None, 'use_cuda': True},
                               train_func_specific_kwargs={'n_epochs': 150},
                               train_best=False, parallel=parallel)
 

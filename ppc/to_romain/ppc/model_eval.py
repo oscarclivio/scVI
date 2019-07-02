@@ -12,7 +12,8 @@ import os
 import pandas as pd
 from statsmodels.stats.multitest import multipletests
 from metrics import *
-from scvi.dataset.svensson import ZhengDataset, MacosDataset, KleinDataset, Sven1Dataset, Sven2Dataset
+from scvi.dataset.svensson import ZhengDataset, MacosDataset, KleinDataset, Sven1Dataset, Sven2Dataset, \
+    ZhengDatasetRandom, MacosDatasetRandom, KleinDatasetRandom, Sven1DatasetRandom, Sven2DatasetRandom
 import time
 import torch
 import numpy as np
@@ -44,6 +45,7 @@ class ModelEval:
                                                         "lr_patience": 15,
                                                         "lr_factor": 0.5,
                                                     },
+                                           n_epochs_kl_warmup=None,
                                            **kwargs)
         self.trainer.train(n_epochs, lr=lr)
 
@@ -125,13 +127,11 @@ if __name__ == '__main__':
             with open(json_path) as file:
                 hyperparams_str = file.read()
                 hyperparams = json.loads(hyperparams_str)
-            kl = 1.
             lr = hyperparams.pop('lr')
         else:
             hyperparams = {}
-            kl = 1
             lr = 1e-4
-        return hyperparams, kl, lr
+        return hyperparams, lr
 
 
     if 'zifa' in dataset_name:
@@ -162,17 +162,40 @@ if __name__ == '__main__':
 
         'sven2_dataset': Sven2Dataset,
 
+
+        'zheng_dataset_random': partial(ZhengDatasetRandom, n_genes_random=100, seed=0),
+
+        'macos_dataset_random': partial(MacosDatasetRandom, n_genes_random=100, seed=0),
+
+        'klein_dataset_random': partial(KleinDatasetRandom, n_genes_random=100, seed=0),
+
+        'klein_dataset_random97': partial(KleinDatasetRandom, n_genes_random=100, seed=97),
+
+        'klein_dataset_random47': partial(KleinDatasetRandom, n_genes_random=100, seed=47),
+
+        'sven1_dataset_random': partial(Sven1DatasetRandom, n_genes_random=100, seed=0),
+
+        'sven2_dataset_random': partial(Sven2DatasetRandom, n_genes_random=100, seed=0),
+
+        'sven1_dataset_random97': partial(Sven1DatasetRandom, n_genes_random=100, seed=97),
+
+        'sven2_dataset_random97': partial(Sven2DatasetRandom, n_genes_random=100, seed=97),
+
+        'sven1_dataset_random47': partial(Sven1DatasetRandom, n_genes_random=100, seed=47),
+
+        'sven2_dataset_random47': partial(Sven2DatasetRandom, n_genes_random=100, seed=47),
+
     }
 
 
     MY_DATASET = datasets_mapper[dataset_name]()
     MY_DATASET.subsample_genes(new_n_genes=nb_genes)
 
-    nb_hyperparams, kl_nb, lr_nb = read_json(args.nb_hyperparams_json)
-    zinb_hyperparams, kl_zinb, lr_zinb = read_json(args.zinb_hyperparams_json)
+    nb_hyperparams, lr_nb = read_json(args.nb_hyperparams_json)
+    zinb_hyperparams, lr_zinb = read_json(args.zinb_hyperparams_json)
 
-    print(nb_hyperparams, kl_nb, lr_nb)
-    print(zinb_hyperparams, kl_zinb, lr_zinb)
+    print(nb_hyperparams, lr_nb)
+    print(zinb_hyperparams, lr_zinb)
 
 
 
@@ -222,7 +245,7 @@ if __name__ == '__main__':
         print("Working on NB")
         nb_eval = ModelEval(model_fn=nb_model, dataset=MY_DATASET, metrics=MY_METRICS)
         nb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
-                            lr=lr_nb, kl=kl_nb)
+                            lr=lr_nb)
         nb_eval.write_csv(os.path.join(dataset_name, 'nb_{}.csv'.format(dataset_name)))
         nb_eval.write_pickle(os.path.join(dataset_name, 'nb_{}.p'.format(dataset_name)))
 
@@ -230,6 +253,6 @@ if __name__ == '__main__':
         print("Working on ZINB")
         zinb_eval = ModelEval(model_fn=zinb_model, dataset=MY_DATASET, metrics=MY_METRICS)
         zinb_eval.multi_train(n_experiments=N_EXPERIMENTS, n_epochs=N_EPOCHS, corruption='uniform',
-                              lr=lr_zinb, kl=kl_zinb)
+                              lr=lr_zinb)
         zinb_eval.write_csv(os.path.join(dataset_name, 'zinb_{}.csv'.format(dataset_name)))
         zinb_eval.write_pickle(os.path.join(dataset_name, 'zinb_{}.p'.format(dataset_name)))
