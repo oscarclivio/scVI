@@ -73,8 +73,8 @@ class NotebookLoader(object):
                         code = re.sub(r'n_samples = \d+', "n_samples = 1", code)
                         code = re.sub(r'n_samples_tsne = \d+', "n_samples_tsne = 10", code)
                         code = re.sub(r'n_samples_posterior_density = \d+', "n_samples_posterior_density = 2", code)
-                        code = re.sub("save_path = 'data/'", "save_path = '"+os.getcwd()+"'", code)
-                        code = re.sub('save_path = "data/"', "save_path = '"+os.getcwd()+"'", code)
+                        code = re.sub("save_path = 'data/'", "save_path = '" + os.getcwd() + "'", code)
+                        code = re.sub('save_path = "data/"', "save_path = '" + os.getcwd() + "'", code)
                         code = re.sub("show_plot = True", "show_plot = False", code)
                         code = re.sub("test_mode = False", "test_mode = True", code)
                         # run the code in themodule
@@ -122,18 +122,6 @@ def test_notebooks_annotation(save_path):
         os.chdir(path=base_path)
 
 
-def test_notebook_smfish(save_path):
-    try:
-        os.chdir(save_path)
-        import notebooks.scRNA_and_smFISH
-        notebooks.scRNA_and_smFISH.allow_notebook_for_test()
-        plt.close('all')
-    except BaseException:
-        raise
-    finally:
-        os.chdir(path=base_path)
-
-
 def test_notebooks_dataloading(save_path):
     try:
         os.chdir(save_path)
@@ -151,6 +139,18 @@ def test_notebooks_basictutorial(save_path):
         os.chdir(save_path)
         import notebooks.basic_tutorial
         notebooks.basic_tutorial.allow_notebook_for_test()
+        plt.close('all')
+    except BaseException:
+        raise
+    finally:
+        os.chdir(path=base_path)
+
+
+def test_notebooks_gimvitutorial(save_path):
+    try:
+        os.chdir(save_path)
+        import notebooks.gimvi_tutorial
+        notebooks.gimvi_tutorial.allow_notebook_for_test()
         plt.close('all')
     except BaseException:
         raise
