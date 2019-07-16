@@ -16,12 +16,12 @@ from functools import partial
 import numpy as np
 import time
 from scvi.dataset.svensson import ZhengDataset, MacosDataset, KleinDataset, Sven1Dataset, Sven2Dataset, \
-    ZhengDatasetRandom, MacosDatasetRandom, KleinDatasetRandom, Sven1DatasetRandom, Sven2DatasetRandom
+    KleinDatasetRNA, Sven1DatasetRNA, Sven2DatasetRNA
 from scvi.inference.autotune import auto_tune_scvi_model
 import logging
 
 from scvi.dataset import CortexDataset, RetinaDataset, HematoDataset, PbmcDataset, \
-    BrainSmallDataset, ZIFALogPoissonDataset
+    BrainSmallDataset, ZIFALogPoissonDataset, ZIFALogPoissonDatasetMixed
 
 
 
@@ -62,6 +62,17 @@ datasets_mapper = {
     'log_poisson_zifa_dataset_12000_' + str(zifa_coef) + '_' + str(zifa_lambda): \
         partial(ZIFALogPoissonDataset, n_cells=12000, dropout_coef=zifa_coef, dropout_lambda=zifa_lambda),
 
+    'log_poisson_zifa_mixed_dataset_12000_' + str(zifa_coef) + '_' + str(zifa_lambda): \
+        partial(ZIFALogPoissonDatasetMixed, n_cells=12000, dropout_coef=zifa_coef, dropout_lambda=zifa_lambda),
+
+    'log_poisson_zifa_mixed_0.33_dataset_12000_' + str(zifa_coef) + '_' + str(zifa_lambda): \
+        partial(ZIFALogPoissonDatasetMixed, n_cells=12000, dropout_coef=zifa_coef, dropout_lambda=zifa_lambda,
+                zero_inflation_share=0.33),
+
+    'log_poisson_zifa_mixed_0.2_dataset_12000_' + str(zifa_coef) + '_' + str(zifa_lambda): \
+        partial(ZIFALogPoissonDatasetMixed, n_cells=12000, dropout_coef=zifa_coef, dropout_lambda=zifa_lambda,
+                zero_inflation_share=0.2),
+
     'zheng_dataset': ZhengDataset,
 
     'macos_dataset': MacosDataset,
@@ -72,27 +83,11 @@ datasets_mapper = {
 
     'sven2_dataset': Sven2Dataset,
 
-    'zheng_dataset_random': partial(ZhengDatasetRandom, n_genes_random=100, seed=1),
+    'klein_rna_dataset': KleinDatasetRNA,
 
-    'macos_dataset_random': partial(MacosDatasetRandom, n_genes_random=100, seed=0),
+    'sven1_rna_dataset': Sven1DatasetRNA,
 
-    'klein_dataset_random': partial(KleinDatasetRandom, n_genes_random=100, seed=0),
-
-    'klein_dataset_random97': partial(KleinDatasetRandom, n_genes_random=100, seed=97),
-
-    'klein_dataset_random47': partial(KleinDatasetRandom, n_genes_random=100, seed=47),
-
-    'sven1_dataset_random': partial(Sven1DatasetRandom, n_genes_random=100, seed=0),
-
-    'sven2_dataset_random': partial(Sven2DatasetRandom, n_genes_random=100, seed=0),
-
-    'sven1_dataset_random97': partial(Sven1DatasetRandom, n_genes_random=100, seed=97),
-
-    'sven2_dataset_random97': partial(Sven2DatasetRandom, n_genes_random=100, seed=97),
-
-    'sven1_dataset_random47': partial(Sven1DatasetRandom, n_genes_random=100, seed=47),
-
-    'sven2_dataset_random47': partial(Sven2DatasetRandom, n_genes_random=100, seed=47),
+    'sven2_rna_dataset': Sven2DatasetRNA,
 
 }
 

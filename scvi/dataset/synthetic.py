@@ -376,3 +376,26 @@ class ZIFALogPoissonDataset(LogPoissonDataset):
         self.mask_zero_zi = ~mask
 
         return data * mask
+
+class ZIFALogPoissonDatasetMixed(LogPoissonDataset):
+    def __init__(self, dropout_coef=0.08, dropout_lambda=1e-3, zero_inflation_share=0.5, **kwargs):
+        self.dropout_coef = dropout_coef
+        self.dropout_lambda=dropout_lambda
+        self.zero_inflation_share = zero_inflation_share
+        super(ZIFALogPoissonDatasetMixed, self).__init__(**kwargs)
+
+    def mask(self, data, labels):
+        self.dropout = self.dropout_coef * np.exp(-self.dropout_lambda * data**2)
+        mask = np.random.binomial(1, 1 - self.dropout).astype(bool)
+
+        no_zi_genes = np.ones((mask.shape[2],)).astype(bool)
+        no_zi_genes[:int(self.zero_inflation_share*no_zi_genes.size)] = False
+        np.random.shuffle(no_zi_genes)
+        mask[:,:,no_zi_genes] = True
+
+        print("No zi genes shape : ", no_zi_genes.shape)
+
+        self.no_zi_genes = no_zi_genes
+        self.mask_zero_zi = ~mask
+
+        return data * mask

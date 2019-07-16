@@ -1,7 +1,7 @@
 from scvi.inference.inference import UnsupervisedTrainer
 from scvi.dataset import CortexDataset, RetinaDataset, HematoDataset, PbmcDataset, \
     BrainSmallDataset, ZISyntheticDatasetCorr, SyntheticDatasetCorr, LogPoissonDataset, ZIFALogPoissonDataset, \
-    ZIFALogPoissonDataset
+    ZIFALogPoissonDataset, ZIFALogPoissonDatasetMixed
 from scvi.dataset.synthetic import SyntheticDatasetCorrLogNormal, ZISyntheticDatasetCorrLogNormal
 from scvi.models import VAE
 
@@ -13,7 +13,7 @@ import pandas as pd
 from statsmodels.stats.multitest import multipletests
 from metrics import *
 from scvi.dataset.svensson import ZhengDataset, MacosDataset, KleinDataset, Sven1Dataset, Sven2Dataset, \
-    ZhengDatasetRandom, MacosDatasetRandom, KleinDatasetRandom, Sven1DatasetRandom, Sven2DatasetRandom
+    KleinDatasetRNA, Sven1DatasetRNA, Sven2DatasetRNA
 import time
 import torch
 import numpy as np
@@ -151,6 +151,16 @@ if __name__ == '__main__':
         'log_poisson_zifa_dataset_12000_' + str(zifa_coef) + '_' + str(zifa_lambda): \
             partial(ZIFALogPoissonDataset, n_cells=12000, dropout_coef=zifa_coef, dropout_lambda=zifa_lambda),
 
+        'log_poisson_zifa_mixed_dataset_12000_' + str(zifa_coef) + '_' + str(zifa_lambda): \
+            partial(ZIFALogPoissonDatasetMixed, n_cells=12000, dropout_coef=zifa_coef, dropout_lambda=zifa_lambda),
+
+        'log_poisson_zifa_mixed_0.33_dataset_12000_' + str(zifa_coef) + '_' + str(zifa_lambda): \
+            partial(ZIFALogPoissonDatasetMixed, n_cells=12000, dropout_coef=zifa_coef, dropout_lambda=zifa_lambda,
+                    zero_inflation_share=0.33),
+
+        'log_poisson_zifa_mixed_0.2_dataset_12000_' + str(zifa_coef) + '_' + str(zifa_lambda): \
+            partial(ZIFALogPoissonDatasetMixed, n_cells=12000, dropout_coef=zifa_coef, dropout_lambda=zifa_lambda,
+                    zero_inflation_share=0.2),
 
         'zheng_dataset': ZhengDataset,
 
@@ -162,28 +172,11 @@ if __name__ == '__main__':
 
         'sven2_dataset': Sven2Dataset,
 
+        'klein_rna_dataset': KleinDatasetRNA,
 
-        'zheng_dataset_random': partial(ZhengDatasetRandom, n_genes_random=100, seed=0),
+        'sven1_rna_dataset': Sven1DatasetRNA,
 
-        'macos_dataset_random': partial(MacosDatasetRandom, n_genes_random=100, seed=0),
-
-        'klein_dataset_random': partial(KleinDatasetRandom, n_genes_random=100, seed=0),
-
-        'klein_dataset_random97': partial(KleinDatasetRandom, n_genes_random=100, seed=97),
-
-        'klein_dataset_random47': partial(KleinDatasetRandom, n_genes_random=100, seed=47),
-
-        'sven1_dataset_random': partial(Sven1DatasetRandom, n_genes_random=100, seed=0),
-
-        'sven2_dataset_random': partial(Sven2DatasetRandom, n_genes_random=100, seed=0),
-
-        'sven1_dataset_random97': partial(Sven1DatasetRandom, n_genes_random=100, seed=97),
-
-        'sven2_dataset_random97': partial(Sven2DatasetRandom, n_genes_random=100, seed=97),
-
-        'sven1_dataset_random47': partial(Sven1DatasetRandom, n_genes_random=100, seed=47),
-
-        'sven2_dataset_random47': partial(Sven2DatasetRandom, n_genes_random=100, seed=47),
+        'sven2_rna_dataset': Sven2DatasetRNA,
 
     }
 
@@ -210,7 +203,7 @@ if __name__ == '__main__':
     USE_BATCHES = use_batches 
     N_EXPERIMENTS = n_experiments
     N_EPOCHS = 150
-    N_LL_MC_SAMPLES = 100
+    N_LL_MC_SAMPLES = 1000
 
     if infer_param_metrics:
         MY_METRICS = [InferParamsOnZerosMetric(tag='zero_params', trainer=None, mask_zero=(MY_DATASET.X == 0))]
